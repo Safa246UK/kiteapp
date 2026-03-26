@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome to KiteApp 🪁</h2>
+        <p class="text-muted">Your personal kite surfing conditions assistant</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h1>🗺️</h1>
+            <h5>Manage Spots</h5>
+            <p class="text-muted">Add and configure your kite surfing locations</p>
+            <a href="/spots" class="btn btn-primary">View Spots</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h1>👤</h1>
+            <h5>Your Profile</h5>
+            <p class="text-muted">Set your weight and kite preferences</p>
+            <a href="/profile" class="btn btn-primary">Edit Profile</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h1>📊</h1>
+            <h5>Conditions</h5>
+            <p class="text-muted">Check today's conditions for your spots</p>
+            <a href="/conditions" class="btn btn-primary">Check Now</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
