@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{{ url_for('spots.detail', spot_id=spot.id) }}" class="btn btn-sm btn-outline-secondary mb-2">← Back to Spot</a>
+        <h2>✏️ Edit: {{ spot.name }}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('spots.edit', spot_id=spot.id) }}">
+
+                    <!-- Name & Description -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Spot Name *</label>
+                            <input type="text" name="name" class="form-control" value="{{ spot.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="description" class="form-control" value="{{ spot.description }}">
+                        </div>
+                    </div>
+
+                    <!-- Coordinates -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Latitude *</label>
+                            <input type="number" name="latitude" class="form-control" step="any"
+                                   value="{{ spot.latitude }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Longitude *</label>
+                            <input type="number" name="longitude" class="form-control" step="any"
+                                   value="{{ spot.longitude }}" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Wind Speed -->
+                    <h6>Wind Speed Settings</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Min Wind (knots)</label>
+                            <input type="number" name="min_wind" class="form-control"
+                                   value="{{ spot.min_wind }}" step="0.5">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Max Wind (knots)</label>
+                            <input type="number" name="max_wind" class="form-control"
+                                   value="{{ spot.max_wind }}" step="0.5">
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Wind Direction Compass -->
+                    <h6>Wind Directions</h6>
+                    <p class="text-muted small mb-2">
+                        Select a rating button, then click slices on the compass to assign it.
+                    </p>
+
+                    <!-- Rating selector buttons -->
+                    <div class="d-flex gap-2 flex-wrap mb-3 justify-content-center" id="rating-buttons">
+                        <button type="button" class="btn btn-sm compass-rating-btn"
+                                data-rating="perfect" style="background:#4CAF50;color:white;">
+                            🟢 Perfect
+                        </button>
+                        <button type="button" class="btn btn-sm compass-rating-btn"
+                                data-rating="good" style="background:#2196F3;color:white;">
+                            🔵 Good
+                        </button>
+                        <button type="button" class="btn btn-sm compass-rating-btn"
+                                data-rating="okay" style="background:#FFC107;color:#333;">
+                            🟡 Okay
+                        </button>
+                        <button type="button" class="btn btn-sm compass-rating-btn"
+                                data-rating="poor" style="background:#FF9800;color:white;">
+                            🟠 Poor
+                        </button>
+                        <button type="button" class="btn btn-sm compass-rating-btn"
+                                data-rating="dangerous" style="background:#9E9E9E;color:white;">
+                            ⬜ Dangerous
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                onclick="windCompass.resetAll(); return false;">
+                            ↺ Reset All
+                        </button>
+                    </div>
+
+                    <!-- The compass -->
+                    <div id="wind-compass-container" style="width:280px; margin: auto;"></div>
+
+                    <!-- Hidden inputs -->
+                    <input type="hidden" name="perfect_directions"   id="hidden_perfect_directions">
+                    <input type="hidden" name="good_directions"      id="hidden_good_directions">
+                    <input type="hidden" name="okay_directions"      id="hidden_okay_directions">
+                    <input type="hidden" name="poor_directions"      id="hidden_poor_directions">
+                    <input type="hidden" name="dangerous_directions" id="hidden_dangerous_directions">
+
+                    <hr>
+
+                    <!-- Tide Settings -->
+                    <h6>Tide Settings (% of tidal range)</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unusable below (% of range)</label>
+                            <input type="number" name="min_tide_percent" class="form-control"
+                                   value="{{ spot.min_tide_percent }}" min="0" max="100">
+                            <small class="text-muted">e.g. 20 = rocks exposed below 20% of tidal range</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unusable above (% of range)</label>
+                            <input type="number" name="max_tide_percent" class="form-control"
+                                   value="{{ spot.max_tide_percent }}" min="0" max="100">
+                            <small class="text-muted">e.g. 85 = no beach above 85% of tidal range</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                        <a href="{{ url_for('spots.detail', spot_id=spot.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.compass-rating-btn {
+    border: 3px solid transparent;
+    transition: box-shadow 0.15s, opacity 0.15s;
+    opacity: 0.65;
+}
+.compass-rating-btn.active-rating {
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
+    opacity: 1;
+}
+</style>
+
+<script src="/static/js/wind_compass.js"></script>
+<script>
+    // Existing spot direction data passed from Python
+    const existingDirections = {
+        perfect:   "{{ spot.perfect_directions }}",
+        good:      "{{ spot.good_directions }}",
+        okay:      "{{ spot.okay_directions }}",
+        poor:      "{{ spot.poor_directions }}",
+        dangerous: "{{ spot.dangerous_directions }}"
+    };
+
+    // Initialise compass and load existing data
+    const windCompass = new WindCompass('wind-compass-container', { size: 280 });
+    windCompass.load(existingDirections);
+
+    // Default active rating button
+    setActiveRatingBtn(document.querySelector('.compass-rating-btn[data-rating="perfect"]'));
+    windCompass.setRating('perfect');
+
+    // Rating button handlers
+    document.querySelectorAll('.compass-rating-btn[data-rating]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            setActiveRatingBtn(this);
+            windCompass.setRating(this.dataset.rating);
+        });
+    });
+
+    function setActiveRatingBtn(activeBtn) {
+        document.querySelectorAll('.compass-rating-btn').forEach(b => b.classList.remove('active-rating'));
+        if (activeBtn) activeBtn.classList.add('active-rating');
+    }
+</script>
+{% endblock %}

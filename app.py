@@ -21,10 +21,12 @@ def load_user(user_id):
 # Register blueprints
 from auth import auth, bcrypt as auth_bcrypt
 from main import main
+from spots import spots
 
 auth_bcrypt.init_app(app)
 app.register_blueprint(auth)
 app.register_blueprint(main)
+app.register_blueprint(spots)
 
 if __name__ == '__main__':
     with app.app_context():

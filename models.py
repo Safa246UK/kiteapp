@@ -41,6 +41,8 @@ class Spot(db.Model):
     description = db.Column(db.Text, default='')
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_retired = db.Column(db.Boolean, default=False)
+    retired_at = db.Column(db.DateTime, nullable=True)
 
     # Tide settings (percentage of tidal range)
     # e.g. min_tide_percent=20 means "not usable below 20% of tidal range"
