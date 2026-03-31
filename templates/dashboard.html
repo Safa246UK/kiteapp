@@ -43,10 +43,15 @@
                     </h5>
                     <!-- Alert Me toggle (ON — can always turn off) -->
                     <form method="POST" action="{{ url_for('spots.toggle_active', spot_id=fav.spot_id) }}">
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" checked
-                                   onchange="this.form.submit()"
-                                   style="cursor:pointer;">
+                        <div class="d-flex align-items-center gap-1"
+                             data-bs-toggle="tooltip"
+                             title="Get a daily WhatsApp when conditions are good">
+                            <small class="text-success fw-semibold">🔔 Alert Me</small>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" checked
+                                       onchange="this.form.submit()"
+                                       style="cursor:pointer;">
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -55,13 +60,12 @@
                 </p>
                 <div class="d-flex justify-content-between align-items-center mt-2">
                     <a href="{{ url_for('spots.detail', spot_id=fav.spot_id) }}" class="btn btn-sm btn-outline-success">View</a>
-                    <form method="POST" action="{{ url_for('spots.toggle_favourite', spot_id=fav.spot_id) }}">
-                        <input type="hidden" name="next" value="dashboard">
-                        <button class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Unlink {{ fav.spot.name }} from your favourites?')">
-                            Unlink
+                    <!-- No unlink while alerts are active — must turn off alert first -->
+                    <span data-bs-toggle="tooltip" title="Turn off alerts before removing this spot">
+                        <button class="btn btn-sm btn-outline-secondary" disabled style="opacity:0.4; cursor:not-allowed;">
+                            🗑️
                         </button>
-                    </form>
+                    </span>
                 </div>
             </div>
         </div>
@@ -87,17 +91,26 @@
                     {% if at_max_active %}
                         <span tabindex="0"
                               data-bs-toggle="tooltip"
-                              title="Turn off an Alert Me spot first">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" disabled style="cursor:not-allowed;">
+                              title="You have a maximum of {{ max_active }} Alert Me spots and you are already maxed out. Turn one off to get alerts for this spot.">
+                            <div class="d-flex align-items-center gap-1">
+                                <small class="text-muted fw-semibold">🔔 Alert Me</small>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" disabled
+                                           style="cursor:not-allowed; opacity:0.35;">
+                                </div>
                             </div>
                         </span>
                     {% else %}
                         <form method="POST" action="{{ url_for('spots.toggle_active', spot_id=fav.spot_id) }}">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox"
-                                       onchange="this.form.submit()"
-                                       style="cursor:pointer;">
+                            <div class="d-flex align-items-center gap-1"
+                                 data-bs-toggle="tooltip"
+                                 title="Get a daily WhatsApp when conditions are good">
+                                <small class="text-muted fw-semibold">🔔 Alert Me</small>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input alert-toggle-off" type="checkbox"
+                                           onchange="this.form.submit()"
+                                           style="cursor:pointer;">
+                                </div>
                             </div>
                         </form>
                     {% endif %}
@@ -110,8 +123,9 @@
                     <form method="POST" action="{{ url_for('spots.toggle_favourite', spot_id=fav.spot_id) }}">
                         <input type="hidden" name="next" value="dashboard">
                         <button class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Unlink {{ fav.spot.name }} from your favourites?')">
-                            Unlink
+                                data-bs-toggle="tooltip" title="Remove from favourites"
+                                onclick="return confirm('Remove {{ fav.spot.name }} from your favourites?')">
+                            🗑️
                         </button>
                     </form>
                 </div>
@@ -122,6 +136,17 @@
 </div>
 {% endif %}
 
+<style>
+/* Off-but-clickable toggle: blue outline so it's clearly interactive */
+.alert-toggle-off {
+    outline: 2px solid #0d6efd;
+    outline-offset: 1px;
+}
+.alert-toggle-off:hover {
+    outline-color: #0a58ca;
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.25);
+}
+</style>
 <script>
 // Initialise Bootstrap tooltips
 document.addEventListener('DOMContentLoaded', function () {
