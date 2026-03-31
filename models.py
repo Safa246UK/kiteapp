@@ -85,5 +85,5 @@ class SpotNote(db.Model):
 
 class AdminSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    max_favourite_spots = db.Column(db.Integer, default=10)
-    max_active_spots = db.Column(db.Integer, default=3)
+    max_favourite_spots = db.Column(db.Integer, default=3)
+    max_active_spots = db.Column(db.Integer, default=2)

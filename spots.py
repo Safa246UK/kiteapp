@@ -27,6 +27,14 @@ def index():
 @spots.route('/spots/add', methods=['POST'])
 @login_required
 def add():
+    settings = AdminSettings.query.first()
+    max_favs = settings.max_favourite_spots if settings else 3
+    fav_count = UserFavouriteSpot.query.filter_by(user_id=current_user.id).count()
+
+    if fav_count >= max_favs:
+        flash(f'You have reached your maximum of {max_favs} favourite spots. Unlink a favourite before creating a new one.', 'danger')
+        return redirect(url_for('spots.index'))
+
     name = request.form.get('name', '').strip()
     lat = request.form.get('latitude')
     lng = request.form.get('longitude')
@@ -62,9 +70,13 @@ def add():
         created_by=current_user.id
     )
     db.session.add(spot)
+    db.session.flush()  # Get spot.id before commit
+
+    # Auto-favourite the newly created spot
+    db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot.id))
     db.session.commit()
-    flash(f'Spot "{name}" added successfully!', 'success')
-    return redirect(url_for('spots.index'))
+    flash(f'Spot "{name}" created and added to your favourites!', 'success')
+    return redirect(url_for('main.index'))
 
 
 @spots.route('/spots/<int:spot_id>')
@@ -86,20 +98,23 @@ def detail(spot_id):
 def toggle_favourite(spot_id):
     settings = AdminSettings.query.first()
     existing = UserFavouriteSpot.query.filter_by(user_id=current_user.id, spot_id=spot_id).first()
+    next_page = request.form.get('next', 'dashboard')
     if existing:
         db.session.delete(existing)
         db.session.commit()
         flash('Spot removed from your favourites.', 'info')
     else:
         count = UserFavouriteSpot.query.filter_by(user_id=current_user.id).count()
-        max_favs = settings.max_favourite_spots if settings else 10
+        max_favs = settings.max_favourite_spots if settings else 3
         if count >= max_favs:
-            flash(f'You can only have {max_favs} favourite spots.', 'danger')
+            flash(f'You have reached your maximum of {max_favs} favourite spots. Unlink a favourite first.', 'danger')
         else:
             db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot_id))
             db.session.commit()
             flash('Spot added to your favourites!', 'success')
-    return redirect(url_for('spots.detail', spot_id=spot_id))
+    if next_page == 'detail':
+        return redirect(url_for('spots.detail', spot_id=spot_id))
+    return redirect(url_for('main.index'))
 
 
 @spots.route('/spots/<int:spot_id>/activate', methods=['POST'])
@@ -109,21 +124,19 @@ def toggle_active(spot_id):
     fav = UserFavouriteSpot.query.filter_by(user_id=current_user.id, spot_id=spot_id).first()
     if not fav:
         flash('Add this spot to your favourites first.', 'danger')
-        return redirect(url_for('spots.detail', spot_id=spot_id))
+        return redirect(url_for('main.index'))
     if fav.is_active:
         fav.is_active = False
         db.session.commit()
-        flash('WhatsApp alerts disabled for this spot.', 'info')
     else:
         active_count = UserFavouriteSpot.query.filter_by(user_id=current_user.id, is_active=True).count()
-        max_active = settings.max_active_spots if settings else 3
+        max_active = settings.max_active_spots if settings else 2
         if active_count >= max_active:
-            flash(f'You can only have {max_active} active spots for alerts.', 'danger')
-        else:
-            fav.is_active = True
-            db.session.commit()
-            flash('WhatsApp alerts enabled for this spot!', 'success')
-    return redirect(url_for('spots.detail', spot_id=spot_id))
+            flash(f'You can only have {max_active} alert-me spots. Turn off another one first.', 'danger')
+            return redirect(url_for('main.index'))
+        fav.is_active = True
+        db.session.commit()
+    return redirect(url_for('main.index'))
 
 
 @spots.route('/spots/<int:spot_id>/note', methods=['POST'])
@@ -187,9 +200,20 @@ def retire(spot_id):
     spot.is_retired = not spot.is_retired
     spot.retired_at = datetime.utcnow() if spot.is_retired else None
     db.session.commit()
-    status = 'retired' if spot.is_retired else 'reinstated'
+    status = 'disabled' if spot.is_retired else 'enabled'
     flash(f'Spot "{spot.name}" has been {status}.', 'success')
-    return redirect(url_for('spots.index'))
+    return redirect(url_for('spots.manage'))
+
+
+@spots.route('/spots/manage')
+@login_required
+def manage():
+    if not current_user.is_admin:
+        flash('Admin access only.', 'danger')
+        return redirect(url_for('main.index'))
+    all_spots = Spot.query.order_by(Spot.name).all()
+    watcher_counts = {s.id: len(s.favourited_by) for s in all_spots}
+    return render_template('spots/manage.html', spots=all_spots, watcher_counts=watcher_counts)
 
 
 @spots.route('/spots/api/all')

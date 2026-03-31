@@ -15,9 +15,9 @@
         <div class="mb-3">
             <a href="{{ url_for('spots.edit', spot_id=spot.id) }}" class="btn btn-sm btn-warning me-2">✏️ Edit Spot</a>
             <form method="POST" action="{{ url_for('spots.retire', spot_id=spot.id) }}" class="d-inline">
-                <button class="btn btn-sm {% if spot.is_retired %}btn-success{% else %}btn-outline-danger{% endif %}"
-                        onclick="return confirm('{% if spot.is_retired %}Reinstate this spot?{% else %}Retire this spot? It will be hidden from regular users.{% endif %}')">
-                    {% if spot.is_retired %}♻️ Reinstate Spot{% else %}🚫 Retire Spot{% endif %}
+                <button class="btn btn-sm {% if spot.is_retired %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+                        onclick="return confirm('{% if spot.is_retired %}Enable this spot?{% else %}Disable this spot? It will be hidden from all users.{% endif %}')">
+                    {% if spot.is_retired %}✅ Enable Spot{% else %}🚫 Disable Spot{% endif %}
                 </button>
             </form>
         </div>

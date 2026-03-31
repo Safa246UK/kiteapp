@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<a href="{{ url_for('admin_bp.users') }}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Users</a>
+
+<div class="row">
+    <!-- User Details -->
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>👤 {{ user.name }}</strong>
+                {% if user.is_active %}
+                    <span class="badge bg-success">Active</span>
+                {% else %}
+                    <span class="badge bg-danger">Disabled</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted">Email</td><td>{{ user.email }}</td></tr>
+                    <tr><td class="text-muted">Phone / WhatsApp</td><td>{{ user.whatsapp_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">Weight</td><td>{{ user.weight_kg }} kg</td></tr>
+                    <tr><td class="text-muted">Kite size adj.</td><td>{{ '%+.1f'|format(user.kite_size_adjustment) }} m</td></tr>
+                    <tr><td class="text-muted">Available days</td><td>{{ user.available_days }}</td></tr>
+                    <tr><td class="text-muted">Available hours</td><td>{{ user.available_from }} – {{ user.available_to }}</td></tr>
+                    <tr><td class="text-muted">Role</td>
+                        <td>{% if user.is_admin %}<span class="badge bg-warning text-dark">Admin</span>
+                            {% else %}<span class="badge bg-secondary">User</span>{% endif %}</td></tr>
+                    <tr><td class="text-muted">Joined</td><td>{{ user.created_at.strftime('%d %b %Y') }}</td></tr>
+                </table>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                {% if user.id != current_user.id %}
+                <form method="POST" action="{{ url_for('admin_bp.toggle_user_active', user_id=user.id) }}">
+                    <button class="btn btn-sm {% if user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                            onclick="return confirm('{% if user.is_active %}Disable this account?{% else %}Enable this account?{% endif %}')">
+                        {% if user.is_active %}🚫 Disable Account{% else %}✅ Enable Account{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>🔑 Change Password</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_bp.set_password', user_id=user.id) }}">
+                    <div class="mb-2">
+                        <input type="password" name="new_password" class="form-control form-control-sm"
+                               placeholder="New password (min 6 chars)" required minlength="6">
+                    </div>
+                    <div class="mb-2">
+                        <input type="password" name="confirm_password" class="form-control form-control-sm"
+                               placeholder="Confirm new password" required>
+                    </div>
+                    <button class="btn btn-sm btn-warning">Set Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spots -->
+    <div class="col-md-7">
+
+        <!-- Alert Me Spots -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>🔔 Alert Me Spots</strong></div>
+            <div class="card-body">
+                {% for fav in alert_favs %}
+                    <span class="badge bg-success me-1">{{ fav.spot.name }}</span>
+                {% else %}
+                    <p class="text-muted mb-0">None set.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Favourite Spots -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>⭐ Favourite Spots</strong></div>
+            <div class="card-body">
+                {% for fav in other_favs %}
+                    <span class="badge bg-primary me-1">{{ fav.spot.name }}</span>
+                {% else %}
+                    <p class="text-muted mb-0">No other favourites.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Created Spots -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>📍 Spots Created by This User</strong></div>
+            <div class="card-body">
+                {% for spot in created_spots %}
+                    <a href="{{ url_for('spots.detail', spot_id=spot.id) }}"
+                       class="badge bg-secondary text-decoration-none me-1">
+                        {{ spot.name }}{% if spot.is_retired %} (disabled){% endif %}
+                    </a>
+                {% else %}
+                    <p class="text-muted mb-0">No spots created.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

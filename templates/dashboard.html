@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🪁 My Spots</h2>
+    <div class="d-flex gap-2 align-items-center">
+        <small class="text-muted">
+            {{ fav_count }}/{{ max_favs }} favourites &nbsp;|&nbsp; {{ active_count }}/{{ max_active }} alert-me
+        </small>
+        {% if at_max_favs %}
+            <span tabindex="0"
+                  data-bs-toggle="tooltip"
+                  title="Unlink a favourite spot before adding a new one">
+                <a href="{{ url_for('spots.index') }}"
+                   class="btn btn-primary btn-sm disabled"
+                   style="pointer-events:none;">+ Find / Add Spot</a>
+            </span>
+        {% else %}
+            <a href="{{ url_for('spots.index') }}" class="btn btn-primary btn-sm">+ Find / Add Spot</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if not active_favs and not other_favs %}
+<div class="alert alert-info">
+    You have no favourite spots yet.
+    <a href="{{ url_for('spots.index') }}">Find a spot</a> to get started!
+</div>
+{% endif %}
+
+{% if active_favs %}
+<h5 class="text-success mb-2">🔔 Alert Me</h5>
+<div class="row mb-4">
+    {% for fav in active_favs %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-success h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <a href="{{ url_for('spots.detail', spot_id=fav.spot_id) }}" class="text-decoration-none text-dark">
+                            {{ fav.spot.name }}
+                        </a>
+                    </h5>
+                    <!-- Alert Me toggle (ON — can always turn off) -->
+                    <form method="POST" action="{{ url_for('spots.toggle_active', spot_id=fav.spot_id) }}">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" checked
+                                   onchange="this.form.submit()"
+                                   style="cursor:pointer;">
+                        </div>
+                    </form>
+                </div>
+                <p class="text-muted small flex-grow-1">
+                    {{ fav.spot.description[:80] }}{% if fav.spot.description|length > 80 %}...{% endif %}
+                </p>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <a href="{{ url_for('spots.detail', spot_id=fav.spot_id) }}" class="btn btn-sm btn-outline-success">View</a>
+                    <form method="POST" action="{{ url_for('spots.toggle_favourite', spot_id=fav.spot_id) }}">
+                        <input type="hidden" name="next" value="dashboard">
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Unlink {{ fav.spot.name }} from your favourites?')">
+                            Unlink
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if other_favs %}
+<h5 class="text-secondary mb-2">⭐ Favourites</h5>
+<div class="row">
+    {% for fav in other_favs %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-primary h-100">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <a href="{{ url_for('spots.detail', spot_id=fav.spot_id) }}" class="text-decoration-none text-dark">
+                            {{ fav.spot.name }}
+                        </a>
+                    </h5>
+                    <!-- Alert Me toggle (OFF) -->
+                    {% if at_max_active %}
+                        <span tabindex="0"
+                              data-bs-toggle="tooltip"
+                              title="Turn off an Alert Me spot first">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" disabled style="cursor:not-allowed;">
+                            </div>
+                        </span>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('spots.toggle_active', spot_id=fav.spot_id) }}">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox"
+                                       onchange="this.form.submit()"
+                                       style="cursor:pointer;">
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+                <p class="text-muted small flex-grow-1">
+                    {{ fav.spot.description[:80] }}{% if fav.spot.description|length > 80 %}...{% endif %}
+                </p>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <a href="{{ url_for('spots.detail', spot_id=fav.spot_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                    <form method="POST" action="{{ url_for('spots.toggle_favourite', spot_id=fav.spot_id) }}">
+                        <input type="hidden" name="next" value="dashboard">
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Unlink {{ fav.spot.name }} from your favourites?')">
+                            Unlink
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+// Initialise Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

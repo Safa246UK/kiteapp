@@ -17,10 +17,12 @@
             <div>
                 {% if current_user.is_authenticated %}
                     <span class="text-light me-3">Hi, {{ current_user.name }}</span>
-                    <a href="/spots" class="btn btn-outline-light btn-sm me-2">Spots</a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-light btn-sm me-2">My Spots</a>
+                    <a href="{{ url_for('spots.index') }}" class="btn btn-outline-light btn-sm me-2">Find Spots</a>
                     <a href="/profile" class="btn btn-outline-light btn-sm me-2">Profile</a>
                     {% if current_user.is_admin %}
-                        <a href="/admin" class="btn btn-warning btn-sm me-2">Admin</a>
+                        <a href="{{ url_for('spots.manage') }}" class="btn btn-warning btn-sm me-2">Manage Spots</a>
+                        <a href="{{ url_for('admin_bp.users') }}" class="btn btn-warning btn-sm me-2">Manage Users</a>
                     {% endif %}
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
                 {% else %}
