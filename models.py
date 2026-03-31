@@ -83,6 +83,23 @@ class SpotNote(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class TideCache(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    spot_id = db.Column(db.Integer, db.ForeignKey('spot.id'), nullable=False, unique=True)
+    station_id = db.Column(db.String(20))
+    station_name = db.Column(db.String(100))
+    station_distance_km = db.Column(db.Float)
+    fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
+    events_json = db.Column(db.Text)  # Raw high/low tide events from API
+
+
+class WeatherCache(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    spot_id = db.Column(db.Integer, db.ForeignKey('spot.id'), nullable=False, unique=True)
+    fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
+    forecast_json = db.Column(db.Text)
+
+
 class AdminSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     max_favourite_spots = db.Column(db.Integer, default=3)

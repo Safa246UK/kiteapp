@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, Spot, UserFavouriteSpot, SpotNote, User, AdminSettings, COMPASS_POINTS
+from weather import get_forecast_table, RATING_COLOURS
 
 spots = Blueprint('spots', __name__)
 
@@ -75,6 +76,14 @@ def add():
     # Auto-favourite the newly created spot
     db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot.id))
     db.session.commit()
+
+    # Fetch weather immediately so data is available straight away
+    try:
+        from weather import fetch_and_cache_weather
+        fetch_and_cache_weather(spot)
+    except Exception as e:
+        print(f"[Weather] Initial fetch failed for {spot.name}: {e}")
+
     flash(f'Spot "{name}" created and added to your favourites!', 'success')
     return redirect(url_for('main.index'))
 
@@ -88,9 +97,36 @@ def detail(spot_id):
         UserFavouriteSpot.spot_id == spot_id
     ).all()
     is_favourite = UserFavouriteSpot.query.filter_by(user_id=current_user.id, spot_id=spot_id).first()
+
+    # If no weather cache exists yet, fetch now
+    from models import WeatherCache, TideCache
+    if not WeatherCache.query.filter_by(spot_id=spot_id).first():
+        try:
+            from weather import fetch_and_cache_weather
+            fetch_and_cache_weather(spot)
+        except Exception as e:
+            print(f"[Weather] On-demand fetch failed: {e}")
+
+    # If no tide cache exists yet, fetch now
+    if not TideCache.query.filter_by(spot_id=spot_id).first():
+        try:
+            import os
+            from tides import fetch_and_cache_tides
+            api_key = os.environ.get('ADMIRALTY_API_KEY', '')
+            if api_key:
+                fetch_and_cache_tides(spot, api_key)
+        except Exception as e:
+            print(f"[Tides] On-demand fetch failed: {e}")
+
+    forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot)
     return render_template('spots/detail.html', spot=spot, notes=notes,
                            watchers=watchers, is_favourite=is_favourite,
-                           compass_points=COMPASS_POINTS)
+                           compass_points=COMPASS_POINTS,
+                           forecast_slots=forecast_slots,
+                           fetched_at=fetched_at,
+                           has_tide=has_tide,
+                           tide_real=tide_real,
+                           rating_colours=RATING_COLOURS)
 
 
 @spots.route('/spots/<int:spot_id>/favourite', methods=['POST'])
@@ -203,6 +239,47 @@ def retire(spot_id):
     status = 'disabled' if spot.is_retired else 'enabled'
     flash(f'Spot "{spot.name}" has been {status}.', 'success')
     return redirect(url_for('spots.manage'))
+
+
+@spots.route('/spots/debug-tides/<int:spot_id>')
+@login_required
+def debug_tides(spot_id):
+    import os
+    from tides import fetch_and_cache_tides, ADMIRALTY_BASE, _headers, find_nearest_station
+    import requests
+
+    spot = Spot.query.get_or_404(spot_id)
+    api_key = os.environ.get('ADMIRALTY_API_KEY', '')
+    output = []
+
+    output.append(f"API Key present: {'YES' if api_key else 'NO'}")
+    output.append(f"API Key (first 8 chars): {api_key[:8] if api_key else 'MISSING'}")
+    output.append(f"Spot: {spot.name} ({spot.latitude}, {spot.longitude})")
+
+    try:
+        output.append("Fetching stations list...")
+        resp = requests.get(f"{ADMIRALTY_BASE}/stations",
+                           headers=_headers(api_key), timeout=15)
+        output.append(f"Stations response: {resp.status_code}")
+        stations = resp.json().get('features', [])
+        output.append(f"Total stations found: {len(stations)}")
+
+        if stations:
+            station, dist = find_nearest_station(spot.latitude, spot.longitude, api_key)
+            output.append(f"Nearest station: {station['properties']['Name']} ({dist:.1f} km)")
+            sid = station['properties']['Id']
+
+            output.append(f"Fetching tidal events for station {sid}...")
+            resp2 = requests.get(f"{ADMIRALTY_BASE}/stations/{sid}/tidalevents",
+                               headers=_headers(api_key),
+                               params={'duration': 4}, timeout=15)
+            output.append(f"Tidal events response: {resp2.status_code}")
+            events = resp2.json()
+            output.append(f"Events returned: {len(events) if isinstance(events, list) else events}")
+    except Exception as e:
+        output.append(f"ERROR: {e}")
+
+    return '<br>'.join(output)
 
 
 @spots.route('/spots/manage')

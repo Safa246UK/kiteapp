@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
@@ -49,4 +51,13 @@ if __name__ == '__main__':
         if not AdminSettings.query.first():
             db.session.add(AdminSettings())
             db.session.commit()
+
+    # Start background scheduler (only in the main process, not the reloader)
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        from scheduler import start_scheduler, refresh_all_weather, refresh_all_tides
+        start_scheduler()
+        refresh_all_weather()
+        refresh_all_tides()
+
     app.run(debug=True)

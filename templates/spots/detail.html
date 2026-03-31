@@ -25,6 +25,160 @@
     </div>
 </div>
 
+<!-- Forecast Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>📅 Forecast (next 24 hours)</strong>
+                {% if fetched_at %}
+                    <small class="text-muted">Updated {{ fetched_at.strftime('%d %b %H:%M') }}</small>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if forecast_slots %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0 text-center" style="min-width:200px;">
+                        <thead>
+                            <!-- Row 1: Day labels spanning their columns -->
+                            <tr>
+                                <th class="text-start ps-2 align-middle" style="min-width:140px;" rowspan="2">Condition</th>
+                                {% for day in forecast_slots %}
+                                <th colspan="{{ day.slots|length }}" class="bg-dark text-white">
+                                    {{ day.label }}
+                                    <span class="fw-normal ms-2 small">🌅 {{ day.sunrise }} 🌇 {{ day.sunset }}</span>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                            <!-- Row 2: Hour labels — green = all conditions good -->
+                            <tr>
+                                {% for day in forecast_slots %}
+                                    {% for slot in day.slots %}
+                                    <th style="background:{{ slot.header_colour }};
+                                               color:{% if slot.header_colour == '#4CAF50' %}white{% else %}#555{% endif %};
+                                               min-width:55px;">
+                                        {{ slot.time }}
+                                    </th>
+                                    {% endfor %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Wind speed -->
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">💨 Wind (kn)</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{{ slot.wind_speed_colour }};"><strong>{{ slot.wind_speed }}</strong></td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            <!-- Gusts -->
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">💥 Gusts (kn)</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{{ slot.gust_colour }};">{{ slot.wind_gust or '—' }}</td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            <!-- Direction -->
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">🧭 Wind Direction</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{{ slot.wind_dir_colour }};">{{ slot.wind_dir }}</td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            <!-- Tide height -->
+                            {% if has_tide %}
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">🌊 Tide (m)
+                                    {% if not tide_real %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;">demo</span>{% endif %}
+                                </td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{{ slot.tide_colour }};">
+                                    {{ slot.tide_height if slot.tide_height is not none else '—' }}
+                                </td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">🌊 Tide %</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{{ slot.tide_colour }};">
+                                    {{ slot.tide_pct if slot.tide_pct is not none else '—' }}%
+                                </td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            {% endif %}
+                            <!-- Waves (only if data available) -->
+                            {% if forecast_slots[0].slots and forecast_slots[0].slots[0].wave_height is not none %}
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">🌊 Waves (m)</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td>{{ slot.wave_height if slot.wave_height is not none else '—' }}</td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            {% endif %}
+                            <!-- Temperature -->
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">🌡️ Temp (°C)</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td>{{ slot.temperature if slot.temperature is not none else '—' }}</td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            <!-- Weather emoji -->
+                            <tr>
+                                <td class="text-start ps-2 text-muted small">☁️ Weather</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td>{{ slot.emoji }}</td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Legend -->
+                <div class="d-flex flex-wrap gap-2 px-2 pt-2 pb-1">
+                    <small class="text-muted me-1">Time:</small>
+                    <span class="badge" style="background:#4CAF50; color:white; border:1px solid #ccc;">All conditions good</span>
+                    <span class="badge" style="background:#f0f0f0; color:#555; border:1px solid #ccc;">Not suitable</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
+                    <small class="text-muted me-1">Wind speed:</small>
+                    <span class="badge" style="background:#e3f2fd; color:#333; border:1px solid #ccc;">Too light</span>
+                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">In range</span>
+                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too strong</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
+                    <small class="text-muted me-1">Direction:</small>
+                    {% for label, colour in rating_colours.items() %}
+                    {% if label != 'out_of_range' %}
+                    <span class="badge" style="background:{{ colour }}; color:#333; border:1px solid #ccc;">
+                        {{ label.replace('_', ' ').title() }}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
+                    <small class="text-muted me-1">Gusts:</small>
+                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">≤30% above avg</span>
+                    <span class="badge" style="background:#ffe0b2; color:#333; border:1px solid #ccc;">31–50% above avg</span>
+                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">&gt;50% above avg</span>
+                </div>
+                <!-- Tide legend -->
+                {% if has_tide %}
+                <div class="d-flex flex-wrap gap-2 px-2 pb-2 pt-1">
+                    <small class="text-muted me-1">Tide:</small>
+                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too low — rocks exposed</span>
+                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">Usable</span>
+                    <span class="badge" style="background:#c5e1f7; color:#333; border:1px solid #ccc;">Too high — no beach</span>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="p-3 text-muted">
+                    Weather data is being fetched — check back in a moment.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Left column: spot details -->
     <div class="col-md-6">
