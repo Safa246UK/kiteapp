@@ -1,8 +1,9 @@
 # KiteApp — Planned Features & Known Tasks
 
 ## In Progress / Next Up
-- Kite size calculator (suggests kite size based on wind speed + rider weight)
 - WhatsApp notifications via Twilio (alert users when conditions are good at Alert Me spots)
+  - Admin button to force-send all WhatsApp alerts immediately, bypassing any "already sent today" check
+- Kite size calculator (suggests kite size based on wind speed + rider weight)
 
 ## Security Enhancements
 - **Email verification on registration** — new users must click a confirmation link before their account is activated; unverified accounts cannot log in
