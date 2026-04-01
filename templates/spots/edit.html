@@ -122,6 +122,63 @@
                         </div>
                     </div>
 
+                    <hr>
+
+                    <!-- Landlocked -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_landlocked"
+                               id="is_landlocked" role="switch"
+                               {% if spot.is_landlocked %}checked{% endif %}>
+                        <label class="form-check-label" for="is_landlocked">
+                            Ignore tide data — landlocked body of water (lake, reservoir, etc.)
+                        </label>
+                    </div>
+
+                    <hr>
+
+                    <!-- Season -->
+                    <h6>Season</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="is_seasonal" id="is_seasonal"
+                               {% if spot.season_start_month %}checked{% endif %}
+                               onchange="document.getElementById('season-fields').style.display = this.checked ? '' : 'none'">
+                        <label class="form-check-label" for="is_seasonal">
+                            This spot has a limited season (leave unchecked for year-round)
+                        </label>
+                    </div>
+                    <div id="season-fields" style="display:{% if spot.season_start_month %}block{% else %}none{% endif %};">
+                        {% set months = [('1','Jan'),('2','Feb'),('3','Mar'),('4','Apr'),('5','May'),('6','Jun'),
+                                         ('7','Jul'),('8','Aug'),('9','Sep'),('10','Oct'),('11','Nov'),('12','Dec')] %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Season Start</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" name="season_start_day" class="form-control"
+                                           style="width:75px;" min="1" max="31"
+                                           value="{{ spot.season_start_day or 1 }}">
+                                    <select name="season_start_month" class="form-select">
+                                        {% for val, name in months %}
+                                        <option value="{{ val }}" {% if spot.season_start_month == val|int %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Season End</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" name="season_end_day" class="form-control"
+                                           style="width:75px;" min="1" max="31"
+                                           value="{{ spot.season_end_day or 1 }}">
+                                    <select name="season_end_month" class="form-select">
+                                        {% for val, name in months %}
+                                        <option value="{{ val }}" {% if spot.season_end_month == val|int %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2 mt-2">
                         <button type="submit" class="btn btn-primary">💾 Save Changes</button>
                         <a href="{{ url_for('spots.detail', spot_id=spot.id) }}" class="btn btn-outline-secondary">Cancel</a>

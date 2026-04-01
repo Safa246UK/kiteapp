@@ -13,20 +13,31 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Kite profile
-    weight_kg = db.Column(db.Float, default=80.0)
+    weight_kg = db.Column(db.Float, default=75.0)
+    min_wind = db.Column(db.Float, default=12.0)   # knots — personal preference
+    max_wind = db.Column(db.Float, default=35.0)   # knots — personal preference
     kite_size_adjustment = db.Column(db.Float, default=0.0)  # +/- metres
     whatsapp_number = db.Column(db.String(20), nullable=True)
 
-    # Availability
-    available_days = db.Column(db.String(50), default='mon,tue,wed,thu,fri,sat,sun')
-    available_from = db.Column(db.String(5), default='06:00')  # HH:MM
-    available_to = db.Column(db.String(5), default='21:00')    # HH:MM
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    # Availability — stored as comma-separated day_time slots e.g. "mon_morning,sat_afternoon"
+    available_slots = db.Column(db.Text, default=','.join(
+        f'{d}_{t}' for d in ['mon','tue','wed','thu','fri','sat','sun']
+                   for t in ['morning','afternoon','evening']
+    ))
+    # Legacy columns retained so old references don't break
+    available_days  = db.Column(db.String(50), default='mon,tue,wed,thu,fri,sat,sun')
+    available_times = db.Column(db.String(50), default='morning,afternoon,evening')
 
     # Relationships
     favourite_spots = db.relationship('UserFavouriteSpot', backref='user', lazy=True)
@@ -60,6 +71,39 @@ class Spot(db.Model):
     okay_directions = db.Column(db.String(200), default='')
     poor_directions = db.Column(db.String(200), default='')
     dangerous_directions = db.Column(db.String(200), default='')
+
+    # Landlocked — tide data not relevant (lake, reservoir, etc.)
+    is_landlocked = db.Column(db.Boolean, default=False)
+
+    # Season window (optional — None = year-round)
+    season_start_month = db.Column(db.Integer, nullable=True)  # 1=Jan … 12=Dec
+    season_start_day   = db.Column(db.Integer, nullable=True)
+    season_end_month   = db.Column(db.Integer, nullable=True)
+    season_end_day     = db.Column(db.Integer, nullable=True)
+
+    _MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec']
+
+    @property
+    def is_in_season(self):
+        if self.season_start_month is None:
+            return True
+        from datetime import date
+        today   = date.today()
+        start   = (self.season_start_month, self.season_start_day)
+        end     = (self.season_end_month,   self.season_end_day)
+        current = (today.month, today.day)
+        if start <= end:                          # e.g. Apr–Oct (no year wrap)
+            return start <= current <= end
+        return current >= start or current <= end  # e.g. Nov–Mar (wraps year)
+
+    @property
+    def season_label(self):
+        if self.season_start_month is None:
+            return None
+        s = f"{self.season_start_day} {self._MONTH_NAMES[self.season_start_month - 1]}"
+        e = f"{self.season_end_day} {self._MONTH_NAMES[self.season_end_month - 1]}"
+        return f"{s} – {e}"
 
     # Relationships
     favourited_by = db.relationship('UserFavouriteSpot', backref='spot', lazy=True)
@@ -98,9 +142,12 @@ class WeatherCache(db.Model):
     spot_id = db.Column(db.Integer, db.ForeignKey('spot.id'), nullable=False, unique=True)
     fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
     forecast_json = db.Column(db.Text)
+    day_summary_json = db.Column(db.Text, nullable=True)  # {"2026-04-01": {"colour": "green", "hours": 5}, ...}
 
 
 class AdminSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     max_favourite_spots = db.Column(db.Integer, default=3)
     max_active_spots = db.Column(db.Integer, default=2)
+    default_min_tide_percent = db.Column(db.Float, default=0.0)
+    default_max_tide_percent = db.Column(db.Float, default=90.0)

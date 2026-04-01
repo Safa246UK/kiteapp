@@ -55,9 +55,10 @@ if __name__ == '__main__':
     # Start background scheduler (only in the main process, not the reloader)
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        from scheduler import start_scheduler, refresh_all_weather, refresh_all_tides
+        from scheduler import start_scheduler, refresh_all_weather, refresh_all_tides, refresh_all_summaries
         start_scheduler()
         refresh_all_weather()
         refresh_all_tides()
+        refresh_all_summaries()
 
     app.run(debug=True)

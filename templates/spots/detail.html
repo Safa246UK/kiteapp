@@ -25,8 +25,19 @@
     </div>
 </div>
 
+{% if not spot.is_in_season %}
+<div class="alert alert-secondary d-flex align-items-center mb-3" role="alert">
+    <span style="font-size:1.4rem;" class="me-2">🚫</span>
+    <div>
+        <strong>Out of Season</strong>
+        {% if spot.season_label %} — this spot is only open {{ spot.season_label }}.{% endif %}
+        Forecast data is not shown outside the season window.
+    </div>
+</div>
+{% endif %}
+
 <!-- Forecast Table -->
-<div class="row mb-4">
+<div class="row mb-4" {% if not spot.is_in_season %}style="display:none;"{% endif %}>
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -37,12 +48,24 @@
             </div>
             <div class="card-body p-0">
                 {% if forecast_slots %}
+                <style>
+                .forecast-label {
+                    position: sticky;
+                    left: 0;
+                    z-index: 2;
+                    background: #fff;
+                    min-width: 140px;
+                }
+                thead .forecast-label {
+                    z-index: 3;
+                }
+                </style>
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm mb-0 text-center" style="min-width:200px;">
                         <thead>
                             <!-- Row 1: Day labels spanning their columns -->
                             <tr>
-                                <th class="text-start ps-2 align-middle" style="min-width:140px;" rowspan="2">Condition</th>
+                                <th class="text-start ps-2 align-middle forecast-label" rowspan="2">Condition</th>
                                 {% for day in forecast_slots %}
                                 <th colspan="{{ day.slots|length }}" class="bg-dark text-white">
                                     {{ day.label }}
@@ -66,29 +89,29 @@
                         <tbody>
                             <!-- Wind speed -->
                             <tr>
-                                <td class="text-start ps-2 text-muted small">💨 Wind (kn)</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">💨 Wind (kn)</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td style="background:{{ slot.wind_speed_colour }};"><strong>{{ slot.wind_speed }}</strong></td>
                                 {% endfor %}{% endfor %}
                             </tr>
                             <!-- Gusts -->
                             <tr>
-                                <td class="text-start ps-2 text-muted small">💥 Gusts (kn)</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">💥 Gusts (kn)</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td style="background:{{ slot.gust_colour }};">{{ slot.wind_gust or '—' }}</td>
                                 {% endfor %}{% endfor %}
                             </tr>
                             <!-- Direction -->
                             <tr>
-                                <td class="text-start ps-2 text-muted small">🧭 Wind Direction</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">🧭 Wind Direction</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td style="background:{{ slot.wind_dir_colour }};">{{ slot.wind_dir }}</td>
                                 {% endfor %}{% endfor %}
                             </tr>
-                            <!-- Tide height -->
-                            {% if has_tide %}
+                            <!-- Tide height (hidden for landlocked spots) -->
+                            {% if has_tide and not spot.is_landlocked %}
                             <tr>
-                                <td class="text-start ps-2 text-muted small">🌊 Tide (m)
+                                <td class="text-start ps-2 text-muted small forecast-label">🌊 Tide (m)
                                     {% if not tide_real %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;">demo</span>{% endif %}
                                 </td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
@@ -98,7 +121,7 @@
                                 {% endfor %}{% endfor %}
                             </tr>
                             <tr>
-                                <td class="text-start ps-2 text-muted small">🌊 Tide %</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">🌊 Tide %</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td style="background:{{ slot.tide_colour }};">
                                     {{ slot.tide_pct if slot.tide_pct is not none else '—' }}%
@@ -109,7 +132,7 @@
                             <!-- Waves (only if data available) -->
                             {% if forecast_slots[0].slots and forecast_slots[0].slots[0].wave_height is not none %}
                             <tr>
-                                <td class="text-start ps-2 text-muted small">🌊 Waves (m)</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">🌊 Waves (m)</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td>{{ slot.wave_height if slot.wave_height is not none else '—' }}</td>
                                 {% endfor %}{% endfor %}
@@ -117,14 +140,14 @@
                             {% endif %}
                             <!-- Temperature -->
                             <tr>
-                                <td class="text-start ps-2 text-muted small">🌡️ Temp (°C)</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">🌡️ Temp (°C)</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td>{{ slot.temperature if slot.temperature is not none else '—' }}</td>
                                 {% endfor %}{% endfor %}
                             </tr>
                             <!-- Weather emoji -->
                             <tr>
-                                <td class="text-start ps-2 text-muted small">☁️ Weather</td>
+                                <td class="text-start ps-2 text-muted small forecast-label">☁️ Weather</td>
                                 {% for day in forecast_slots %}{% for slot in day.slots %}
                                 <td>{{ slot.emoji }}</td>
                                 {% endfor %}{% endfor %}
@@ -218,8 +241,14 @@
         <div class="card mb-3">
             <div class="card-header"><strong>🌊 Tide Settings</strong></div>
             <div class="card-body">
+                {% if spot.is_landlocked %}
+                <p class="mb-0 text-muted">Tide ignored — landlocked body of water</p>
+                {% elif no_tide_station %}
+                <p class="mb-0 text-muted">No UK tidal station found within range of this spot — tide data unavailable. Conditions are assessed on wind and direction only.</p>
+                {% else %}
                 <p class="mb-1">Unusable below <strong>{{ spot.min_tide_percent }}%</strong> of tidal range</p>
                 <p class="mb-0">Unusable above <strong>{{ spot.max_tide_percent }}%</strong> of tidal range</p>
+                {% endif %}
             </div>
         </div>
 

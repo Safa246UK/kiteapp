@@ -14,9 +14,15 @@
                 {% endwith %}
 
                 <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" name="name" class="form-control" required autofocus>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">First Name</label>
+                            <input type="text" name="first_name" class="form-control" required autofocus>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Surname</label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email address</label>
@@ -29,6 +35,22 @@
                     <div class="mb-3">
                         <label class="form-label">Confirm Password</label>
                         <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                    <hr>
+                    <p class="text-muted small mb-2">Your kite profile — used to personalise conditions ratings:</p>
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" name="weight_kg" class="form-control" value="75" min="30" max="200" step="1">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Min Wind (kn)</label>
+                            <input type="number" name="min_wind" class="form-control" value="12" min="1" max="60" step="1">
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Max Wind (kn)</label>
+                            <input type="number" name="max_wind" class="form-control" value="35" min="1" max="80" step="1">
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Create Account</button>
                 </form>

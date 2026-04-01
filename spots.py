@@ -11,18 +11,22 @@ spots = Blueprint('spots', __name__)
 @login_required
 def index():
     if current_user.is_admin:
-        all_spots = Spot.query.all()
+        all_spots = Spot.query.order_by(Spot.name).all()
     else:
-        all_spots = Spot.query.filter_by(is_retired=False).all()
+        all_spots = Spot.query.filter_by(is_retired=False).order_by(Spot.name).all()
     user_favourites = {f.spot_id for f in UserFavouriteSpot.query.filter_by(user_id=current_user.id).all()}
     user_actives = {f.spot_id for f in UserFavouriteSpot.query.filter_by(user_id=current_user.id, is_active=True).all()}
-    settings = AdminSettings.query.first()
+    settings  = AdminSettings.query.first()
+    max_favs  = settings.max_favourite_spots if settings else 3
+    fav_count = len(user_favourites)
     return render_template('spots/index.html',
                            spots=all_spots,
                            user_favourites=user_favourites,
                            user_actives=user_actives,
                            compass_points=COMPASS_POINTS,
-                           settings=settings)
+                           settings=settings,
+                           at_max_favs=not current_user.is_admin and fav_count >= max_favs,
+                           max_favs=max_favs)
 
 
 @spots.route('/spots/add', methods=['POST'])
@@ -32,7 +36,7 @@ def add():
     max_favs = settings.max_favourite_spots if settings else 3
     fav_count = UserFavouriteSpot.query.filter_by(user_id=current_user.id).count()
 
-    if fav_count >= max_favs:
+    if not current_user.is_admin and fav_count >= max_favs:
         flash(f'You have reached your maximum of {max_favs} favourite spots. Unlink a favourite before creating a new one.', 'danger')
         return redirect(url_for('spots.index'))
 
@@ -54,6 +58,8 @@ def add():
         flash('Name and location are required.', 'danger')
         return redirect(url_for('spots.index'))
 
+    is_seasonal   = 'is_seasonal'   in request.form
+    is_landlocked = 'is_landlocked' in request.form
     spot = Spot(
         name=name,
         latitude=float(lat),
@@ -68,19 +74,26 @@ def add():
         okay_directions=okay,
         poor_directions=poor,
         dangerous_directions=dangerous,
-        created_by=current_user.id
+        created_by=current_user.id,
+        is_landlocked=is_landlocked,
+        season_start_month=int(request.form.get('season_start_month', 1)) if is_seasonal else None,
+        season_start_day=int(request.form.get('season_start_day', 1))     if is_seasonal else None,
+        season_end_month=int(request.form.get('season_end_month', 12))    if is_seasonal else None,
+        season_end_day=int(request.form.get('season_end_day', 31))        if is_seasonal else None,
     )
     db.session.add(spot)
     db.session.flush()  # Get spot.id before commit
 
-    # Auto-favourite the newly created spot
-    db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot.id))
+    # Auto-favourite the newly created spot (only for non-admins under the limit)
+    if not current_user.is_admin and fav_count < max_favs:
+        db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot.id))
     db.session.commit()
 
     # Fetch weather immediately so data is available straight away
     try:
-        from weather import fetch_and_cache_weather
+        from weather import fetch_and_cache_weather, compute_and_cache_summary
         fetch_and_cache_weather(spot)
+        compute_and_cache_summary(spot)
     except Exception as e:
         print(f"[Weather] Initial fetch failed for {spot.name}: {e}")
 
@@ -118,7 +131,9 @@ def detail(spot_id):
         except Exception as e:
             print(f"[Tides] On-demand fetch failed: {e}")
 
-    forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot)
+    forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot, user=current_user)
+    tc = TideCache.query.filter_by(spot_id=spot_id).first()
+    no_tide_station = not spot.is_landlocked and tc is not None and not tc.station_id
     return render_template('spots/detail.html', spot=spot, notes=notes,
                            watchers=watchers, is_favourite=is_favourite,
                            compass_points=COMPASS_POINTS,
@@ -126,6 +141,7 @@ def detail(spot_id):
                            fetched_at=fetched_at,
                            has_tide=has_tide,
                            tide_real=tide_real,
+                           no_tide_station=no_tide_station,
                            rating_colours=RATING_COLOURS)
 
 
@@ -220,6 +236,17 @@ def edit(spot_id):
         spot.okay_directions      = request.form.get('okay_directions', '')
         spot.poor_directions      = request.form.get('poor_directions', '')
         spot.dangerous_directions = request.form.get('dangerous_directions', '')
+        spot.is_landlocked = 'is_landlocked' in request.form
+        if 'is_seasonal' in request.form:
+            spot.season_start_month = int(request.form.get('season_start_month', 1))
+            spot.season_start_day   = int(request.form.get('season_start_day', 1))
+            spot.season_end_month   = int(request.form.get('season_end_month', 12))
+            spot.season_end_day     = int(request.form.get('season_end_day', 31))
+        else:
+            spot.season_start_month = None
+            spot.season_start_day   = None
+            spot.season_end_month   = None
+            spot.season_end_day     = None
         db.session.commit()
         flash(f'Spot "{spot.name}" updated.', 'success')
         return redirect(url_for('spots.detail', spot_id=spot_id))

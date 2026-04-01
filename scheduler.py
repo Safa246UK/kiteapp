@@ -40,6 +40,21 @@ def refresh_all_tides():
                 print(f"[Tides] Failed for {spot.name}: {e}")
 
 
+def refresh_all_summaries():
+    """Compute and cache day condition summaries for every active spot."""
+    from app import app
+    from models import Spot
+    from weather import compute_and_cache_summary
+
+    with app.app_context():
+        spots = Spot.query.filter_by(is_retired=False).all()
+        for spot in spots:
+            try:
+                compute_and_cache_summary(spot)
+            except Exception as e:
+                print(f"[Summaries] Failed for {spot.name}: {e}")
+
+
 def start_scheduler():
     scheduler.add_job(
         refresh_all_weather,
@@ -48,5 +63,12 @@ def start_scheduler():
         id='refresh_weather',
         replace_existing=True,
     )
+    scheduler.add_job(
+        refresh_all_summaries,
+        trigger='interval',
+        hours=1,
+        id='refresh_summaries',
+        replace_existing=True,
+    )
     scheduler.start()
-    print("[Scheduler] Started — weather refreshes every hour.")
+    print("[Scheduler] Started — weather and summaries refresh every hour.")

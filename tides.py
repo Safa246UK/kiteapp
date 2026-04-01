@@ -65,6 +65,12 @@ def fetch_and_cache_tides(spot, api_key):
             return
         if distance_km > MAX_STATION_DISTANCE_KM:
             print(f"[Tides] {spot.name}: nearest station is {distance_km:.0f}km away — skipping")
+            # Record that we checked so the app knows tide data is unavailable
+            if not cache:
+                db.session.add(TideCache(spot_id=spot.id, station_distance_km=distance_km))
+            else:
+                cache.station_distance_km = distance_km
+            db.session.commit()
             return
         station_id   = station['properties']['Id']
         station_name = station['properties']['Name']

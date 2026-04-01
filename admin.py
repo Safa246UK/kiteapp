@@ -29,8 +29,10 @@ def users():
 
 @admin_bp.route('/admin/users/<int:user_id>')
 @login_required
-@admin_required
 def user_detail(user_id):
+    if not current_user.is_admin and current_user.id != user_id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.index'))
     user = User.query.get_or_404(user_id)
     created_spots = Spot.query.filter_by(created_by=user_id).order_by(Spot.name).all()
     favs = (UserFavouriteSpot.query
@@ -45,6 +47,27 @@ def user_detail(user_id):
                            created_spots=created_spots,
                            alert_favs=alert_favs,
                            other_favs=other_favs)
+
+
+@admin_bp.route('/admin/users/<int:user_id>/edit', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    if not current_user.is_admin and current_user.id != user_id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('main.index'))
+    user = User.query.get_or_404(user_id)
+    user.first_name  = request.form.get('first_name', '').strip() or user.first_name
+    user.last_name   = request.form.get('last_name', '').strip()  or user.last_name
+    user.weight_kg   = float(request.form.get('weight_kg', user.weight_kg))
+    user.min_wind    = float(request.form.get('min_wind',  user.min_wind))
+    user.max_wind    = float(request.form.get('max_wind',  user.max_wind))
+    user.whatsapp_number = request.form.get('whatsapp_number', '').strip() or None
+    slots = request.form.getlist('available_slots')
+    if slots:
+        user.available_slots = ','.join(slots)
+    db.session.commit()
+    flash('Profile updated.', 'success')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))
 
 
 @admin_bp.route('/admin/users/<int:user_id>/toggle-active', methods=['POST'])
@@ -116,8 +139,10 @@ def update_settings():
         flash('Max alert-me spots cannot exceed max favourite spots.', 'danger')
         return redirect(url_for('admin_bp.users'))
 
-    settings.max_favourite_spots = new_max_favs
-    settings.max_active_spots    = new_max_active
+    settings.max_favourite_spots     = new_max_favs
+    settings.max_active_spots        = new_max_active
+    settings.default_min_tide_percent = float(request.form.get('default_min_tide_percent', 0.0))
+    settings.default_max_tide_percent = float(request.form.get('default_max_tide_percent', 90.0))
     db.session.commit()
     flash('Settings updated.', 'success')
     return redirect(url_for('admin_bp.users'))

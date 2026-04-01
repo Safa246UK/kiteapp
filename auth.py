@@ -51,10 +51,18 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        name = request.form.get('name', '').strip()
-        password = request.form.get('password', '')
-        confirm = request.form.get('confirm_password', '')
+        email      = request.form.get('email', '').strip().lower()
+        first_name = request.form.get('first_name', '').strip()
+        last_name  = request.form.get('last_name', '').strip()
+        password   = request.form.get('password', '')
+        confirm    = request.form.get('confirm_password', '')
+        weight_kg  = float(request.form.get('weight_kg', 75.0))
+        min_wind   = float(request.form.get('min_wind', 12.0))
+        max_wind   = float(request.form.get('max_wind', 35.0))
+
+        if not first_name or not last_name:
+            flash('Please enter your first name and surname.', 'danger')
+            return redirect(url_for('auth.register'))
 
         if password != confirm:
             flash('Passwords do not match.', 'danger')
@@ -70,7 +78,9 @@ def register():
 
         hashed = bcrypt.generate_password_hash(password).decode('utf-8')
         is_first_user = User.query.count() == 0
-        user = User(email=email, name=name, password=hashed, is_admin=is_first_user)
+        user = User(email=email, first_name=first_name, last_name=last_name,
+                    password=hashed, is_admin=is_first_user,
+                    weight_kg=weight_kg, min_wind=min_wind, max_wind=max_wind)
         db.session.add(user)
 
         if is_first_user and not AdminSettings.query.first():
@@ -140,6 +150,12 @@ def reset_password(token):
             flash('Password updated! Please log in.', 'success')
             return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', token=token)
+
+
+@auth.route('/profile')
+@login_required
+def profile():
+    return redirect(url_for('admin_bp.user_detail', user_id=current_user.id))
 
 
 @auth.route('/logout')

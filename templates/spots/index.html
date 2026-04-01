@@ -4,9 +4,16 @@
 <div class="row">
     <div class="col-12 d-flex justify-content-between align-items-center mb-3">
         <h2>🗺️ Kite Spots</h2>
+        {% if at_max_favs %}
+        <span tabindex="0" data-bs-toggle="tooltip"
+              title="You have reached your maximum of {{ max_favs }} favourite spots. Remove one before adding a new spot.">
+            <button class="btn btn-primary disabled" style="pointer-events:none;">+ Add New Spot</button>
+        </span>
+        {% else %}
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSpotModal">
             + Add New Spot
         </button>
+        {% endif %}
     </div>
 </div>
 
@@ -20,8 +27,9 @@
 <!-- Spot List -->
 <div class="row">
     {% for spot in spots %}
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 {% if spot.id in user_actives %}border-success{% elif spot.id in user_favourites %}border-primary{% endif %}">
+    <div class="col-md-4 mb-3" id="spot-card-{{ spot.id }}">
+        <div class="card h-100 spot-card {% if spot.id in user_actives %}border-success{% elif spot.id in user_favourites %}border-primary{% endif %}"
+             data-spot-id="{{ spot.id }}" style="cursor:pointer;">
             <div class="card-body">
                 <h5 class="card-title">{{ spot.name }}</h5>
                 <p class="text-muted small">{{ spot.description[:80] }}{% if spot.description|length > 80 %}...{% endif %}</p>
@@ -33,8 +41,20 @@
                     <span class="badge bg-primary">Favourite</span>
                 {% endif %}
             </div>
-            <div class="card-footer">
+            <div class="card-footer d-flex gap-2" onclick="event.stopPropagation();">
                 <a href="{{ url_for('spots.detail', spot_id=spot.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                {% if spot.id in user_favourites %}
+                    <button class="btn btn-sm btn-outline-secondary" disabled>⭐ Favourited</button>
+                {% elif at_max_favs %}
+                    <span data-bs-toggle="tooltip" title="You have reached your maximum of {{ max_favs }} favourite spots.">
+                        <button class="btn btn-sm btn-outline-secondary" disabled style="pointer-events:none;">⭐ Add to Favourites</button>
+                    </span>
+                {% else %}
+                    <form method="POST" action="{{ url_for('spots.toggle_favourite', spot_id=spot.id) }}">
+                        <input type="hidden" name="next" value="spots">
+                        <button class="btn btn-sm btn-outline-success">⭐ Add to Favourites</button>
+                    </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -155,13 +175,66 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Unusable below (% of range)</label>
-                            <input type="number" name="min_tide_percent" class="form-control" value="20" min="0" max="100">
+                            <input type="number" name="min_tide_percent" class="form-control" value="{{ settings.default_min_tide_percent | int }}" min="0" max="100">
                             <small class="text-muted">e.g. 20 = rocks exposed below 20% of tidal range</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Unusable above (% of range)</label>
-                            <input type="number" name="max_tide_percent" class="form-control" value="85" min="0" max="100">
+                            <input type="number" name="max_tide_percent" class="form-control" value="{{ settings.default_max_tide_percent | int }}" min="0" max="100">
                             <small class="text-muted">e.g. 85 = no beach above 85% of tidal range</small>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Landlocked -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_landlocked"
+                               id="add_is_landlocked" role="switch">
+                        <label class="form-check-label" for="add_is_landlocked">
+                            Ignore tide data — landlocked body of water (lake, reservoir, etc.)
+                        </label>
+                    </div>
+
+                    <hr>
+
+                    <!-- Season -->
+                    <h6>Season</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="is_seasonal" id="add_is_seasonal"
+                               onchange="document.getElementById('add-season-fields').style.display = this.checked ? '' : 'none'">
+                        <label class="form-check-label" for="add_is_seasonal">
+                            This spot has a limited season
+                        </label>
+                    </div>
+                    <div id="add-season-fields" style="display:none;">
+                        {% set months = [('1','Jan'),('2','Feb'),('3','Mar'),('4','Apr'),('5','May'),('6','Jun'),
+                                         ('7','Jul'),('8','Aug'),('9','Sep'),('10','Oct'),('11','Nov'),('12','Dec')] %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Season Start</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" name="season_start_day" class="form-control"
+                                           style="width:75px;" min="1" max="31" value="1">
+                                    <select name="season_start_month" class="form-select">
+                                        {% for val, name in months %}
+                                        <option value="{{ val }}">{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Season End</label>
+                                <div class="d-flex gap-2">
+                                    <input type="number" name="season_end_day" class="form-control"
+                                           style="width:75px;" min="1" max="31" value="31">
+                                    <select name="season_end_month" class="form-select">
+                                        {% for val, name in months %}
+                                        <option value="{{ val }}" {% if val == '12' %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -186,10 +259,17 @@
     box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
     opacity: 1;
 }
+.card-highlighted {
+    outline: 3px solid #0d6efd;
+    box-shadow: 0 0 0 4px rgba(13,110,253,0.25);
+}
 </style>
 
 <script src="/static/js/wind_compass.js"></script>
 <script>
+    const atMaxFavs = {{ 'true' if at_max_favs else 'false' }};
+    const markerMap = {};   // spot.id → Leaflet marker
+
     /* ---- Map ---- */
     const map = L.map('map').setView([54.5, -2.0], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -201,23 +281,76 @@
         .then(spots => {
             spots.forEach(spot => {
                 const marker = L.marker([spot.lat, spot.lng]).addTo(map);
+                markerMap[spot.id] = marker;
+
                 const retiredBadge = spot.is_retired ? ' <span style="color:#999">(Retired)</span>' : '';
+
+                let favBtn = '';
+                if (spot.is_favourite) {
+                    favBtn = `<button class="btn btn-sm btn-outline-secondary mt-1" disabled>⭐ Favourited</button>`;
+                } else if (atMaxFavs) {
+                    favBtn = `<button class="btn btn-sm btn-outline-secondary mt-1" disabled title="You have reached your favourites limit">⭐ Add to Favourites</button>`;
+                } else if (!spot.is_retired) {
+                    favBtn = `<button class="btn btn-sm btn-outline-success mt-1" onclick="addToFavourites(${spot.id})">⭐ Add to Favourites</button>`;
+                }
+
                 marker.bindPopup(`
                     <strong>${spot.name}</strong>${retiredBadge}<br>
                     ${spot.description ? spot.description + '<br>' : ''}
                     👥 ${spot.watcher_count} watcher(s)<br>
-                    <a href="/spots/${spot.id}">View details</a>
+                    <a href="/spots/${spot.id}" class="btn btn-sm btn-outline-primary mt-1">View Details</a>
+                    ${favBtn}
                 `);
+
                 if (spot.is_retired) marker.setOpacity(0.4);
+
+                marker.on('click', function () {
+                    highlightCard(spot.id);
+                });
             });
         });
 
-    // Click map → fill coordinates & open modal
+    // Click map background → fill coordinates & open modal
     map.on('click', function(e) {
+        // Only open modal if click was NOT on a marker
+        if (e.originalEvent._stopped) return;
         document.getElementById('modal-lat').value = e.latlng.lat.toFixed(6);
         document.getElementById('modal-lng').value = e.latlng.lng.toFixed(6);
         new bootstrap.Modal(document.getElementById('addSpotModal')).show();
     });
+
+    // Card clicks → pan map and open popup
+    document.querySelectorAll('.spot-card').forEach(card => {
+        card.addEventListener('click', function () {
+            const spotId = parseInt(this.dataset.spotId);
+            const marker = markerMap[spotId];
+            if (!marker) return;
+            map.panTo(marker.getLatLng());
+            marker.openPopup();
+            highlightCard(spotId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    function highlightCard(spotId) {
+        // Remove highlight from all cards
+        document.querySelectorAll('.spot-card').forEach(c => c.classList.remove('card-highlighted'));
+        const col = document.getElementById('spot-card-' + spotId);
+        if (!col) return;
+        const card = col.querySelector('.spot-card');
+        if (card) {
+            card.classList.add('card-highlighted');
+            col.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function addToFavourites(spotId) {
+        fetch(`/spots/${spotId}/toggle_favourite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'next=spots'
+        }).then(() => location.reload());
+    }
 
     /* ---- Wind Compass ---- */
     let windCompass;
@@ -243,5 +376,10 @@
         document.querySelectorAll('.compass-rating-btn').forEach(b => b.classList.remove('active-rating'));
         if (activeBtn) activeBtn.classList.add('active-rating');
     }
+
+    // Initialise tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
 </script>
 {% endblock %}
