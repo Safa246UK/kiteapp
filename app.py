@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 load_dotenv()
 from flask import Flask
 from flask_login import LoginManager
-from flask_bcrypt import Bcrypt
 from flask_mail import Mail
 from models import db, User
+from extensions import bcrypt
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kiteapp.db'
@@ -21,7 +21,7 @@ app.config['MAIL_PASSWORD']        = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER']  = os.environ.get('MAIL_DEFAULT_SENDER', '')
 
 db.init_app(app)
-bcrypt = Bcrypt(app)
+bcrypt.init_app(app)
 mail = Mail(app)
 
 login_manager = LoginManager(app)
@@ -32,13 +32,11 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Register blueprints
-from auth import auth, bcrypt as auth_bcrypt
+from auth import auth
 from main import main
 from spots import spots
-from admin import admin_bp, bcrypt as admin_bcrypt
+from admin import admin_bp
 
-auth_bcrypt.init_app(app)
-admin_bcrypt.init_app(app)
 app.register_blueprint(auth)
 app.register_blueprint(main)
 app.register_blueprint(spots)

@@ -1,9 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from models import db, User, Spot, UserFavouriteSpot, AdminSettings
-from flask_bcrypt import Bcrypt
+from extensions import bcrypt
 
-bcrypt = Bcrypt()
 admin_bp = Blueprint('admin_bp', __name__)
 
 
