@@ -11,6 +11,8 @@
 - **WhatsApp phone number verification** — phone number is optional; users without one can use the app fully. When a user *does* save a number, send a verification message via Twilio containing a one-time code; number is only activated once confirmed, to prevent someone entering another person's number. No verification needed if the user clears their number or has Alert Me turned off.
 
 ## Planned Features
+- **Find Spots filtering** — filter the spot list/map by country, and/or within X km of the user's current location (browser geolocation)
+- **International tidal data** — investigate alternatives to the UK Admiralty API with global coverage (e.g. NOAA for USA, CMEMS for Europe, WorldTides API)
 - Extend forecast from 3 days to 7 days
   - Change `forecast_days: 3 → 7` in Open-Meteo call
   - Change tidal API `duration: 4 → 7`

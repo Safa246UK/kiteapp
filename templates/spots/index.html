@@ -345,7 +345,7 @@
     }
 
     function addToFavourites(spotId) {
-        fetch(`/spots/${spotId}/toggle_favourite`, {
+        fetch(`/spots/${spotId}/favourite`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'next=spots'

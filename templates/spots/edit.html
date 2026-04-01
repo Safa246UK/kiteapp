@@ -5,6 +5,7 @@
     <div class="col-12">
         <a href="{{ url_for('spots.detail', spot_id=spot.id) }}" class="btn btn-sm btn-outline-secondary mb-2">← Back to Spot</a>
         <h2>✏️ Edit: {{ spot.name }}</h2>
+        <p class="text-muted small mb-0">Created by <strong>{{ creator.name }}</strong> ({{ creator.email }}) on {{ spot.created_at.strftime('%d %b %Y') }}</p>
     </div>
 </div>
 

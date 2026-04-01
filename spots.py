@@ -249,7 +249,8 @@ def edit(spot_id):
         db.session.commit()
         flash(f'Spot "{spot.name}" updated.', 'success')
         return redirect(url_for('spots.detail', spot_id=spot_id))
-    return render_template('spots/edit.html', spot=spot)
+    creator = User.query.get(spot.created_by)
+    return render_template('spots/edit.html', spot=spot, creator=creator)
 
 
 @spots.route('/spots/<int:spot_id>/retire', methods=['POST'])
