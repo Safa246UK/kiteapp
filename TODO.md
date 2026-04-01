@@ -7,7 +7,7 @@
 ## Security Enhancements
 - **Email verification on registration** — new users must click a confirmation link before their account is activated; unverified accounts cannot log in
 - **Stronger password rules** — enforce minimum length (e.g. 10 chars), at least one uppercase, one number, and one special character; apply to both registration and admin password reset
-- **WhatsApp phone number verification** — when a user saves a phone number, send a verification message via Twilio containing a one-time link or code; number is only stored/activated once confirmed, to prevent someone entering another person's number
+- **WhatsApp phone number verification** — phone number is optional; users without one can use the app fully. When a user *does* save a number, send a verification message via Twilio containing a one-time code; number is only activated once confirmed, to prevent someone entering another person's number. No verification needed if the user clears their number or has Alert Me turned off.
 
 ## Planned Features
 - Extend forecast from 3 days to 7 days
