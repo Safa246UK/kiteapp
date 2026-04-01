@@ -4,6 +4,11 @@
 - Kite size calculator (suggests kite size based on wind speed + rider weight)
 - WhatsApp notifications via Twilio (alert users when conditions are good at Alert Me spots)
 
+## Security Enhancements
+- **Email verification on registration** — new users must click a confirmation link before their account is activated; unverified accounts cannot log in
+- **Stronger password rules** — enforce minimum length (e.g. 10 chars), at least one uppercase, one number, and one special character; apply to both registration and admin password reset
+- **WhatsApp phone number verification** — when a user saves a phone number, send a verification message via Twilio containing a one-time link or code; number is only stored/activated once confirmed, to prevent someone entering another person's number
+
 ## Planned Features
 - Extend forecast from 3 days to 7 days
   - Change `forecast_days: 3 → 7` in Open-Meteo call
