@@ -72,8 +72,14 @@ def fetch_and_cache_tides(spot, api_key):
                 cache.station_distance_km = distance_km
             db.session.commit()
             return
-        station_id   = station['properties']['Id']
-        station_name = station['properties']['Name']
+        props        = station['properties']
+        station_id   = props['Id']
+        station_name = props['Name']
+        hat, lat     = _fetch_hat_lat(props, station_id, api_key)
+        if cache:
+            cache.station_hat = hat
+            cache.station_lat = lat
+        # (will be committed below with the rest of the cache update)
 
     # Fetch 4 days of tidal events (covers our 3-day forecast window)
     resp = requests.get(
@@ -143,12 +149,17 @@ def interpolate_height(events, dt):
     return round(height, 2)
 
 
-def tide_percentage(height, day_low, day_high):
-    """Express height as % of today's tidal range (0% = low, 100% = high)."""
-    tidal_range = day_high - day_low
+def tide_percentage(height, ref_low, ref_high):
+    """Express height as % between ref_low and ref_high.
+
+    When called with HAT/LAT:  0% = Lowest Astronomical Tide, 100% = Highest Astronomical Tide.
+    Values above 100% indicate a storm surge above HAT.
+    Falls back to daily high/low range if HAT/LAT are not yet cached for a spot.
+    """
+    tidal_range = ref_high - ref_low
     if tidal_range == 0:
         return 50
-    return round((height - day_low) / tidal_range * 100)
+    return round((height - ref_low) / tidal_range * 100)
 
 
 def tide_colour(pct, spot):
@@ -191,57 +202,96 @@ def generate_dummy_tide_slots(spot, target_dates):
     return result
 
 
-def _get_station_id(spot, api_key):
+def _fetch_hat_lat(station_props, station_id, api_key):
+    """Return (hat, lat) for a station.
+
+    Tries the station properties from the list response first.
+    If not present, fetches the individual station endpoint.
+    Returns (None, None) if unavailable.
     """
-    Return the nearest station ID for a spot.
-    Caches only the station metadata (not tidal data) to avoid
-    scanning 608 stations on every page load.
+    hat = station_props.get('HighestAstronomicalTide')
+    lat = station_props.get('LowestAstronomicalTide')
+    if hat is not None:
+        return hat, lat or 0.0
+    try:
+        resp = requests.get(f"{ADMIRALTY_BASE}/stations/{station_id}",
+                            headers=_headers(api_key), timeout=10)
+        resp.raise_for_status()
+        props = resp.json().get('properties', {})
+        hat = props.get('HighestAstronomicalTide')
+        lat = props.get('LowestAstronomicalTide', 0.0)
+        return hat, lat or 0.0
+    except Exception as e:
+        print(f"[Tides] Could not fetch HAT/LAT for station {station_id}: {e}")
+        return None, None
+
+
+def _get_station_id(spot, api_key):
+    """Return the nearest station ID for a spot.
+
+    Caches station metadata (including HAT/LAT) to avoid scanning all stations
+    on every page load.
     """
     cache = TideCache.query.filter_by(spot_id=spot.id).first()
     if cache and cache.station_id:
         return cache.station_id, cache.station_name
 
-    # Find nearest station and store just the ID
     station, distance_km = find_nearest_station(spot.latitude, spot.longitude, api_key)
     if not station or distance_km > MAX_STATION_DISTANCE_KM:
         return None, None
 
-    station_id   = station['properties']['Id']
-    station_name = station['properties']['Name']
+    props        = station['properties']
+    station_id   = props['Id']
+    station_name = props['Name']
+    hat, lat     = _fetch_hat_lat(props, station_id, api_key)
 
     if cache:
         cache.station_id          = station_id
         cache.station_name        = station_name
         cache.station_distance_km = distance_km
+        cache.station_hat         = hat
+        cache.station_lat         = lat
     else:
         db.session.add(TideCache(
             spot_id=spot.id,
             station_id=station_id,
             station_name=station_name,
             station_distance_km=distance_km,
+            station_hat=hat,
+            station_lat=lat,
         ))
     db.session.commit()
     return station_id, station_name
 
 
-def _events_to_slots(events, spot, target_dates):
-    """Convert a list of parsed tidal events into the slot dict we need."""
+def _events_to_slots(events, spot, target_dates, hat=None, lat=None):
+    """Convert a list of parsed tidal events into the slot dict we need.
+
+    Uses HAT/LAT as the percentage reference when available (consistent across
+    neap and spring tides).  Falls back to the day's own high/low range if
+    HAT/LAT have not yet been cached for this station.
+    """
     result = {}
-    for date in target_dates:
-        date_key   = date.strftime('%Y-%m-%d')
-        day_events = [e for e in events if e['dt'].date() == date]
+    for target_date in target_dates:
+        date_key   = target_date.strftime('%Y-%m-%d')
+        day_events = [e for e in events if e['dt'].date() == target_date]
         if not day_events:
             continue
-        day_low  = min(e['height'] for e in day_events)
-        day_high = max(e['height'] for e in day_events)
+
+        if hat is not None:
+            ref_low  = lat if lat is not None else 0.0
+            ref_high = hat
+        else:
+            ref_low  = min(e['height'] for e in day_events)
+            ref_high = max(e['height'] for e in day_events)
 
         result[date_key] = {}
         for hour in range(24):
-            dt     = datetime(date.year, date.month, date.day, hour)
+            dt     = datetime(target_date.year, target_date.month, target_date.day, hour)
             height = interpolate_height(events, dt)
             if height is None:
                 continue
-            pct = tide_percentage(height, day_low, day_high)
+            pct = tide_percentage(height, ref_low, ref_high)
             result[date_key][hour] = {
                 'height': height,
                 'pct':    pct,
@@ -260,16 +310,25 @@ def get_tide_slots(spot, target_dates):
     api_key = os.environ.get('ADMIRALTY_API_KEY', '')
     cache   = TideCache.query.filter_by(spot_id=spot.id).first()
 
+    hat = cache.station_hat if cache else None
+    lat = cache.station_lat if cache else None
+
     if not api_key:
         print(f"[Tides] No API key set.")
-        return _events_to_slots(_parse_events(cache.events_json), spot, target_dates) if (cache and cache.events_json) else {}
+        return _events_to_slots(_parse_events(cache.events_json), spot, target_dates,
+                                hat=hat, lat=lat) if (cache and cache.events_json) else {}
 
     try:
         station_id, _ = _get_station_id(spot, api_key)
         if not station_id:
             return {}
 
-        # Always fetch live
+        # Re-read cache in case _get_station_id just populated HAT/LAT
+        cache = TideCache.query.filter_by(spot_id=spot.id).first()
+        hat   = cache.station_hat if cache else None
+        lat   = cache.station_lat if cache else None
+
+        # Always fetch live tidal events
         resp = requests.get(
             f"{ADMIRALTY_BASE}/stations/{station_id}/tidalevents",
             headers=_headers(api_key),
@@ -283,20 +342,17 @@ def get_tide_slots(spot, target_dates):
         if cache:
             cache.fetched_at  = datetime.utcnow()
             cache.events_json = json.dumps(raw_events)
-        else:
-            cache = TideCache.query.filter_by(spot_id=spot.id).first()
-            if cache:
-                cache.events_json = json.dumps(raw_events)
-        db.session.commit()
+            db.session.commit()
 
         events = _parse_events(json.dumps(raw_events))
         print(f"[Tides] Live data fetched for {spot.name}")
-        return _events_to_slots(events, spot, target_dates)
+        return _events_to_slots(events, spot, target_dates, hat=hat, lat=lat)
 
     except Exception as e:
         print(f"[Tides] API unavailable for {spot.name}: {e}")
         if cache and cache.events_json:
             print(f"[Tides] Using last received data for {spot.name}")
-            return _events_to_slots(_parse_events(cache.events_json), spot, target_dates)
+            return _events_to_slots(_parse_events(cache.events_json), spot, target_dates,
+                                    hat=hat, lat=lat)
         print(f"[Tides] No fallback data available for {spot.name}")
         return {}

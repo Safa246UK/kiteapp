@@ -133,6 +133,8 @@ class TideCache(db.Model):
     station_id = db.Column(db.String(20))
     station_name = db.Column(db.String(100))
     station_distance_km = db.Column(db.Float)
+    station_hat = db.Column(db.Float, nullable=True)  # Highest Astronomical Tide (metres above Chart Datum)
+    station_lat = db.Column(db.Float, nullable=True)  # Lowest Astronomical Tide (metres above Chart Datum)
     fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
     events_json = db.Column(db.Text)  # Raw high/low tide events from API
 

@@ -22,11 +22,13 @@
                 <label class="form-label">Default Min Tide %</label>
                 <input type="number" name="default_min_tide_percent" class="form-control"
                        value="{{ settings.default_min_tide_percent | int }}" min="0" max="100">
+                <small class="text-muted">0% = LAT, 100% = HAT</small>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Default Max Tide %</label>
                 <input type="number" name="default_max_tide_percent" class="form-control"
                        value="{{ settings.default_max_tide_percent | int }}" min="0" max="100">
+                <small class="text-muted">0% = LAT, 100% = HAT</small>
             </div>
             <div class="col-md-2">
                 <button class="btn btn-primary w-100">Save Settings</button>

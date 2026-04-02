@@ -421,7 +421,8 @@ def get_day_summaries_for_user(spot_id, user):
         if t_cache and t_cache.events_json:
             try:
                 tide_data = _events_to_slots(
-                    _parse_events(t_cache.events_json), spot, target_dates)
+                    _parse_events(t_cache.events_json), spot, target_dates,
+                    hat=t_cache.station_hat, lat=t_cache.station_lat)
             except Exception:
                 pass
 
