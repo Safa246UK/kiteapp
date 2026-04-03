@@ -55,9 +55,17 @@ def register():
         last_name  = request.form.get('last_name', '').strip()
         password   = request.form.get('password', '')
         confirm    = request.form.get('confirm_password', '')
-        weight_kg  = float(request.form.get('weight_kg', 75.0))
-        min_wind   = float(request.form.get('min_wind', 12.0))
-        max_wind   = float(request.form.get('max_wind', 35.0))
+        weight_kg          = float(request.form.get('weight_kg', 75.0))
+        min_wind           = float(request.form.get('min_wind', 12.0))
+        max_wind           = float(request.form.get('max_wind', 35.0))
+        available_slots    = ','.join(request.form.getlist('available_slots'))
+        whatsapp_dial_code = request.form.get('whatsapp_dial_code', '+44').strip()
+        whatsapp_number    = request.form.get('whatsapp_number', '').strip() or None
+        whatsapp_enabled   = 'whatsapp_enabled'  in request.form
+        whatsapp_today     = 'whatsapp_today'     in request.form
+        whatsapp_tomorrow  = 'whatsapp_tomorrow'  in request.form
+        whatsapp_day_after = 'whatsapp_day_after' in request.form
+        timezone           = request.form.get('timezone', 'Europe/London')
 
         if not first_name or not last_name:
             flash('Please enter your first name and surname.', 'danger')
@@ -79,7 +87,15 @@ def register():
         is_first_user = User.query.count() == 0
         user = User(email=email, first_name=first_name, last_name=last_name,
                     password=hashed, is_admin=is_first_user,
-                    weight_kg=weight_kg, min_wind=min_wind, max_wind=max_wind)
+                    weight_kg=weight_kg, min_wind=min_wind, max_wind=max_wind,
+                    available_slots=available_slots or None,
+                    whatsapp_dial_code=whatsapp_dial_code,
+                    whatsapp_number=whatsapp_number,
+                    whatsapp_enabled=whatsapp_enabled,
+                    whatsapp_today=whatsapp_today,
+                    whatsapp_tomorrow=whatsapp_tomorrow,
+                    whatsapp_day_after=whatsapp_day_after,
+                    timezone=timezone)
         db.session.add(user)
 
         if is_first_user and not AdminSettings.query.first():

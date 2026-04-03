@@ -52,9 +52,9 @@ def _direction_rating(spot, wind_dir_compass):
     return 'dangerous'
 
 
-def rate_slot(spot, wind_speed, wind_dir_compass):
-    """Return a rating string for one time slot (uses spot wind range)."""
-    if wind_speed < spot.min_wind or wind_speed > spot.max_wind:
+def rate_slot(spot, wind_speed, wind_dir_compass, min_wind, max_wind):
+    """Return a rating string for one time slot."""
+    if wind_speed < min_wind or wind_speed > max_wind:
         return 'out_of_range'
     return _direction_rating(spot, wind_dir_compass)
 
@@ -65,6 +65,106 @@ def _tide_irrelevant(spot):
         return True
     tc = TideCache.query.filter_by(spot_id=spot.id).first()
     return tc is not None and not tc.station_id
+
+
+# ---------------------------------------------------------------------------
+# Availability + slot-hour helpers (shared with alerts.py)
+# ---------------------------------------------------------------------------
+
+def _sun_hours(date_key, sun):
+    """Return (sunrise_hour, sunset_hour) integers for a date, with fallback."""
+    day = sun.get(date_key)
+    if not day:
+        return 6, 21
+    return day['sunrise'].hour, day['sunset'].hour
+
+
+def _slot_hours(slot, sunrise_h, sunset_h):
+    """Return set of integer hours covered by the named slot on this day."""
+    if slot == 'morning':
+        return set(range(max(sunrise_h, 0), 12))
+    if slot == 'afternoon':
+        return set(range(12, min(18, sunset_h)))
+    if slot == 'evening':
+        return set(range(18, sunset_h)) if sunset_h > 18 else set()
+    return set()
+
+
+def _available_slots_for_day(user, day_of_week):
+    """Return set of slot names the user is available for on this weekday (0=Mon)."""
+    day_key = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')[day_of_week]
+    if not user.available_slots:
+        return set()
+    return {
+        s[len(day_key) + 1:]
+        for s in user.available_slots.split(',')
+        if s.strip().startswith(day_key + '_')
+    }
+
+
+def _contiguous_groups(available_slots, sunrise_h, sunset_h):
+    """Return list of hour-sets, one per maximal contiguous run of available slots.
+
+    morning/afternoon are always contiguous (share 12:00).
+    afternoon/evening are contiguous only when sunset > 18:00.
+    """
+    ordered = [s for s in ('morning', 'afternoon', 'evening') if s in available_slots]
+    if not ordered:
+        return []
+
+    def adjacent(a, b):
+        if a == 'morning'   and b == 'afternoon': return True
+        if a == 'afternoon' and b == 'evening':   return sunset_h > 18
+        return False
+
+    groups, current = [], [ordered[0]]
+    for i in range(1, len(ordered)):
+        if adjacent(ordered[i - 1], ordered[i]):
+            current.append(ordered[i])
+        else:
+            groups.append(current)
+            current = [ordered[i]]
+    groups.append(current)
+
+    return [
+        {h for slot in g for h in _slot_hours(slot, sunrise_h, sunset_h)}
+        for g in groups
+    ]
+
+
+def _good_hours_in_set(hour_set, date_key, spot, user,
+                       times, speeds, dirs, tide_data, tide_irrelevant, now):
+    """Count good hours within hour_set for the given date.
+
+    Returns (count, conditions_str, start_hour) where start_hour is the
+    first hour (int) with good conditions, or None if none found.
+    """
+    good_speeds, good_dirs, good_hours = [], [], []
+
+    for i, time_str in enumerate(times):
+        dt = datetime.fromisoformat(time_str)
+        if dt.strftime('%Y-%m-%d') != date_key or dt < now or dt.hour not in hour_set:
+            continue
+        spd     = round(speeds[i]) if i < len(speeds) else 0
+        compass = degrees_to_compass(dirs[i] if i < len(dirs) else 0)
+        wind_ok = user.min_wind <= spd <= user.max_wind
+        dir_ok  = _direction_rating(spot, compass) in ('perfect', 'good', 'okay')
+        td      = tide_data.get(date_key, {}).get(dt.hour)
+        tide_ok = bool(td and spot.min_tide_percent <= td['pct'] <= spot.max_tide_percent)
+        if wind_ok and dir_ok and (tide_ok or tide_irrelevant):
+            good_speeds.append(spd)
+            good_dirs.append(compass)
+            good_hours.append(dt.hour)
+
+    if not good_speeds:
+        return 0, '', None
+    avg_spd  = round(sum(good_speeds) / len(good_speeds))
+    dir_freq = {}
+    for d in good_dirs:
+        dir_freq[d] = dir_freq.get(d, 0) + 1
+    top_dir    = max(dir_freq, key=dir_freq.get)
+    start_hour = min(good_hours)
+    return len(good_speeds), f"{avg_spd}kn {top_dir}", start_hour
 
 
 # ---------------------------------------------------------------------------
@@ -195,8 +295,8 @@ def get_forecast_table(spot, user=None):
     if not cache:
         return None, None, False, False
 
-    eff_min_wind = user.min_wind if user else spot.min_wind
-    eff_max_wind = user.max_wind if user else spot.max_wind
+    eff_min_wind = user.min_wind if user else 12.0
+    eff_max_wind = user.max_wind if user else 35.0
 
     times, speeds, dirs, gusts, codes, temps, waves, sun = _parse_weather_cache(cache)
 
@@ -375,7 +475,7 @@ def compute_and_cache_summary(spot):
     day_counts = _count_good_hours(
         spot, times, speeds, dirs, sun,
         tide_data, tide_irrelevant,
-        spot.min_wind, spot.max_wind, target_dates,
+        12.0, 35.0, target_dates,
     )
 
     summary = {
@@ -398,9 +498,11 @@ def compute_and_cache_summary(spot):
 
 
 def get_day_summaries_for_user(spot_id, user):
-    """Compute day summaries using the user's personal wind settings.
+    """Compute day summaries using the user's availability and wind settings.
 
-    Reads from cached weather + cached tide events — no live API calls.
+    Green  = any contiguous available period has >= 3 good hours.
+    Amber  = any contiguous available period has >= 1 good hour.
+    Grey   = no good hours within available periods.
     """
     from tides import _parse_events, _events_to_slots
     from models import Spot
@@ -415,6 +517,7 @@ def get_day_summaries_for_user(spot_id, user):
     target_dates    = [date.today() + timedelta(days=i) for i in range(3)]
     tide_irrelevant = _tide_irrelevant(spot)
     tide_data       = {}
+    now             = datetime.now()
 
     if not tide_irrelevant:
         t_cache = TideCache.query.filter_by(spot_id=spot_id).first()
@@ -426,16 +529,28 @@ def get_day_summaries_for_user(spot_id, user):
             except Exception:
                 pass
 
-    day_counts = _count_good_hours(
-        spot, times, speeds, dirs, sun,
-        tide_data, tide_irrelevant,
-        user.min_wind, user.max_wind, target_dates,
-    )
-
     result = []
     for i, label in enumerate(('Today', 'Tomorrow', 'The next day')):
-        key    = (date.today() + timedelta(days=i)).isoformat()
-        hours  = day_counts.get(key, 0)
-        colour = 'green' if hours >= 3 else ('amber' if hours >= 1 else 'grey')
-        result.append({'label': label, 'colour': COLOUR_HEX[colour], 'hours': hours})
+        target    = target_dates[i]
+        date_key  = target.isoformat()
+        available = _available_slots_for_day(user, target.weekday())
+
+        if not available:
+            result.append({'label': label, 'colour': COLOUR_HEX['grey'], 'hours': None})
+            continue
+
+        sunrise_h, sunset_h = _sun_hours(date_key, sun)
+        groups      = _contiguous_groups(available, sunrise_h, sunset_h)
+        best_hours  = 0
+        for hour_set in groups:
+            if not hour_set:
+                continue
+            count, _, _sh = _good_hours_in_set(
+                hour_set, date_key, spot, user,
+                times, speeds, dirs, tide_data, tide_irrelevant, now)
+            if count > best_hours:
+                best_hours = count
+
+        colour = 'green' if best_hours >= 3 else ('amber' if best_hours >= 1 else 'grey')
+        result.append({'label': label, 'colour': COLOUR_HEX[colour], 'hours': best_hours})
     return result

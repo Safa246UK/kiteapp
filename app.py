@@ -8,7 +8,8 @@ from models import db, User
 from extensions import bcrypt
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kiteapp.db'
+_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'kiteapp.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{_db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-later')
 

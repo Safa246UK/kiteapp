@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from models import db, User, Spot, UserFavouriteSpot, AdminSettings
 from extensions import bcrypt
@@ -60,13 +60,58 @@ def edit_user(user_id):
     user.weight_kg   = float(request.form.get('weight_kg', user.weight_kg))
     user.min_wind    = float(request.form.get('min_wind',  user.min_wind))
     user.max_wind    = float(request.form.get('max_wind',  user.max_wind))
-    user.whatsapp_number = request.form.get('whatsapp_number', '').strip() or None
+    user.whatsapp_dial_code = request.form.get('whatsapp_dial_code', '+44').strip()
+    user.whatsapp_number    = request.form.get('whatsapp_number', '').strip() or None
+    user.whatsapp_enabled   = 'whatsapp_enabled'  in request.form
+    user.whatsapp_today     = 'whatsapp_today'     in request.form
+    user.whatsapp_tomorrow  = 'whatsapp_tomorrow'  in request.form
+    user.whatsapp_day_after = 'whatsapp_day_after' in request.form
+    user.timezone           = request.form.get('timezone', 'Europe/London')
     slots = request.form.getlist('available_slots')
     if slots:
         user.available_slots = ','.join(slots)
     db.session.commit()
     flash('Profile updated.', 'success')
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/admin/users/<int:user_id>/send-whatsapp', methods=['POST'])
+@login_required
+@admin_required
+def send_whatsapp(user_id):
+    user = User.query.get_or_404(user_id)
+    message = request.form.get('message', '').strip()
+    if not message:
+        flash('Message cannot be empty.', 'danger')
+        return redirect(url_for('admin_bp.users'))
+    if not user.whatsapp_number:
+        flash(f'{user.name} has no phone number saved.', 'danger')
+        return redirect(url_for('admin_bp.users'))
+    from whatsapp import send_whatsapp as _send
+    ok, result = _send(user.whatsapp_dial_code or '+44', user.whatsapp_number, message)
+    if ok:
+        flash(f'WhatsApp sent to {user.name} ✓', 'success')
+    else:
+        flash(f'Failed to send to {user.name}: {result}', 'danger')
+    return redirect(url_for('admin_bp.users'))
+
+
+@admin_bp.route('/admin/send-all-alerts', methods=['POST'])
+@login_required
+@admin_required
+def send_all_alerts():
+    from alerts import send_all_alerts as _send_all
+    app_url = request.host_url.rstrip('/')
+    results = _send_all(app_url)
+    sent    = sum(1 for _, ok, _ in results if ok)
+    skipped = sum(1 for _, ok, detail in results if not ok and 'No qualifying' in detail)
+    failed  = len(results) - sent - skipped
+    parts   = []
+    if sent:    parts.append(f'{sent} sent')
+    if skipped: parts.append(f'{skipped} had nothing to report')
+    if failed:  parts.append(f'{failed} failed')
+    flash('Alerts: ' + ', '.join(parts) if parts else 'No users with WhatsApp enabled.', 'info')
+    return redirect(url_for('admin_bp.users'))
 
 
 @admin_bp.route('/admin/users/<int:user_id>/toggle-active', methods=['POST'])

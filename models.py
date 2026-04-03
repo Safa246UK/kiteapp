@@ -24,7 +24,13 @@ class User(db.Model, UserMixin):
     min_wind = db.Column(db.Float, default=12.0)   # knots — personal preference
     max_wind = db.Column(db.Float, default=35.0)   # knots — personal preference
     kite_size_adjustment = db.Column(db.Float, default=0.0)  # +/- metres
-    whatsapp_number = db.Column(db.String(20), nullable=True)
+    whatsapp_dial_code  = db.Column(db.String(10),  default='+44')
+    whatsapp_number     = db.Column(db.String(20),  nullable=True)
+    whatsapp_enabled    = db.Column(db.Boolean,     default=False)
+    whatsapp_today      = db.Column(db.Boolean,     default=True)
+    whatsapp_tomorrow   = db.Column(db.Boolean,     default=False)
+    whatsapp_day_after  = db.Column(db.Boolean,     default=False)
+    timezone            = db.Column(db.String(50),  default='Europe/London')
 
     @property
     def name(self):
@@ -60,10 +66,6 @@ class Spot(db.Model):
     # e.g. max_tide_percent=85 means "not usable above 85% of tidal range"
     min_tide_percent = db.Column(db.Float, default=20.0)
     max_tide_percent = db.Column(db.Float, default=85.0)
-
-    # Wind speed settings (knots)
-    min_wind = db.Column(db.Float, default=12.0)
-    max_wind = db.Column(db.Float, default=35.0)
 
     # Wind direction ratings (comma separated compass points e.g. "SW,WSW,W")
     perfect_directions = db.Column(db.String(200), default='')

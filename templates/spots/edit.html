@@ -27,36 +27,21 @@
                         </div>
                     </div>
 
-                    <!-- Coordinates -->
+                    <!-- Coordinates + Map -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Latitude *</label>
-                            <input type="number" name="latitude" class="form-control" step="any"
+                            <input type="number" name="latitude" id="latitude" class="form-control" step="any"
                                    value="{{ spot.latitude }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Longitude *</label>
-                            <input type="number" name="longitude" class="form-control" step="any"
+                            <input type="number" name="longitude" id="longitude" class="form-control" step="any"
                                    value="{{ spot.longitude }}" required>
                         </div>
                     </div>
-
-                    <hr>
-
-                    <!-- Wind Speed -->
-                    <h6>Wind Speed Settings</h6>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Min Wind (knots)</label>
-                            <input type="number" name="min_wind" class="form-control"
-                                   value="{{ spot.min_wind }}" step="0.5">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Max Wind (knots)</label>
-                            <input type="number" name="max_wind" class="form-control"
-                                   value="{{ spot.max_wind }}" step="0.5">
-                        </div>
-                    </div>
+                    <div id="edit-map" style="height:300px;border-radius:8px;" class="mb-3"></div>
+                    <p class="text-muted small mb-3">Drag the marker to adjust the location, or type coordinates above.</p>
 
                     <hr>
 
@@ -110,7 +95,7 @@
                     <h6>Tide Settings</h6>
                     <p class="text-muted small mb-2">
                         Percentages are based on the station's absolute tidal range:
-                        <strong>0% = Lowest Astronomical Tide (LAT)</strong>, <strong>100% = Highest Astronomical Tide (HAT)</strong>.
+                        We use max and min tide data (Lowest and Highest Astronomical Tides) to calculate the impact of tides, when available.
                         This means thresholds stay consistent across neap and spring tides.
                     </p>
                     <div class="row">
@@ -209,6 +194,46 @@
 }
 </style>
 
+<script>
+    // Draggable location map
+    const initLat = {{ spot.latitude }};
+    const initLng = {{ spot.longitude }};
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+
+    const editMap = L.map('edit-map').setView([initLat, initLng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(editMap);
+
+    const marker = L.marker([initLat, initLng], { draggable: true }).addTo(editMap);
+
+    // Marker dragged → update inputs
+    marker.on('dragend', function () {
+        const pos = marker.getLatLng();
+        latInput.value = pos.lat.toFixed(6);
+        lngInput.value = pos.lng.toFixed(6);
+    });
+
+    // Click on map → move marker + update inputs
+    editMap.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        latInput.value = e.latlng.lat.toFixed(6);
+        lngInput.value = e.latlng.lng.toFixed(6);
+    });
+
+    // Typing in inputs → move marker
+    [latInput, lngInput].forEach(input => {
+        input.addEventListener('change', function () {
+            const lat = parseFloat(latInput.value);
+            const lng = parseFloat(lngInput.value);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                marker.setLatLng([lat, lng]);
+                editMap.setView([lat, lng]);
+            }
+        });
+    });
+</script>
 <script src="/static/js/wind_compass.js"></script>
 <script>
     // Existing spot direction data passed from Python

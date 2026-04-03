@@ -47,8 +47,6 @@ def add():
     description = request.form.get('description', '').strip()
     min_tide = request.form.get('min_tide_percent', 20)
     max_tide = request.form.get('max_tide_percent', 85)
-    min_wind = request.form.get('min_wind', 12)
-    max_wind = request.form.get('max_wind', 35)
     perfect = request.form.get('perfect_directions', '')
     good = request.form.get('good_directions', '')
     okay = request.form.get('okay_directions', '')
@@ -68,8 +66,6 @@ def add():
         description=description,
         min_tide_percent=float(min_tide),
         max_tide_percent=float(max_tide),
-        min_wind=float(min_wind),
-        max_wind=float(max_wind),
         perfect_directions=perfect,
         good_directions=good,
         okay_directions=okay,
@@ -228,8 +224,6 @@ def edit(spot_id):
         spot.longitude   = float(request.form.get('longitude'))
         spot.min_tide_percent = float(request.form.get('min_tide_percent', 20))
         spot.max_tide_percent = float(request.form.get('max_tide_percent', 85))
-        spot.min_wind    = float(request.form.get('min_wind', 12))
-        spot.max_wind    = float(request.form.get('max_wind', 35))
         spot.perfect_directions   = request.form.get('perfect_directions', '')
         spot.good_directions      = request.form.get('good_directions', '')
         spot.okay_directions      = request.form.get('okay_directions', '')

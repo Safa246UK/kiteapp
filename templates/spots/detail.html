@@ -219,8 +219,6 @@
         <div class="card mb-3">
             <div class="card-header"><strong>💨 Wind Settings</strong></div>
             <div class="card-body">
-                <p class="mb-3"><strong>Speed:</strong> {{ spot.min_wind }}–{{ spot.max_wind }} knots</p>
-
                 <p class="mb-2"><strong>Wind Directions:</strong></p>
 
                 <!-- Compass display -->
@@ -246,7 +244,7 @@
                 {% elif no_tide_station %}
                 <p class="mb-0 text-muted">No UK tidal station found within range of this spot — tide data unavailable. Conditions are assessed on wind and direction only.</p>
                 {% else %}
-                <p class="text-muted small mb-2">0% = Lowest Astronomical Tide (LAT) · 100% = Highest Astronomical Tide (HAT)</p>
+                <p class="text-muted small mb-2">We use max and min tide data (Lowest and Highest Astronomical Tides) to calculate the impact of tides, when available.</p>
                 <p class="mb-1">Unusable below <strong>{{ spot.min_tide_percent }}%</strong></p>
                 <p class="mb-0">Unusable above <strong>{{ spot.max_tide_percent }}%</strong></p>
                 {% endif %}

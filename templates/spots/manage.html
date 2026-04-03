@@ -12,7 +12,6 @@
             <tr>
                 <th>Name</th>
                 <th>Location</th>
-                <th>Wind (knots)</th>
                 <th>Watchers</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -27,7 +26,6 @@
                     </a>
                 </td>
                 <td><small>{{ spot.latitude|round(4) }}, {{ spot.longitude|round(4) }}</small></td>
-                <td>{{ spot.min_wind }}–{{ spot.max_wind }}</td>
                 <td>{{ watcher_counts[spot.id] }}</td>
                 <td>
                     {% if spot.is_retired %}
@@ -49,7 +47,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="text-center text-muted">No spots yet.</td>
+                <td colspan="5" class="text-center text-muted">No spots yet.</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -52,6 +52,115 @@
                             <input type="number" name="max_wind" class="form-control" value="35" min="1" max="80" step="1">
                         </div>
                     </div>
+                    <hr>
+                    <p class="text-muted small mb-2"><strong>Times I can kite</strong></p>
+                    <p class="text-muted small mb-2">Morning is sunrise to 12pm, afternoon is 12pm to 6pm or sunset (whichever is earlier), and evening is 6pm to sunset.</p>
+                    {% set days = [('mon','Mon'),('tue','Tue'),('wed','Wed'),('thu','Thu'),('fri','Fri'),('sat','Sat'),('sun','Sun')] %}
+                    {% set times = [('morning','Morning'),('afternoon','Afternoon'),('evening','Evening')] %}
+                    <div class="mb-3 table-responsive">
+                        <table class="table table-sm table-bordered mb-0" style="font-size:0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    {% for d,dl in days %}<th class="text-center">{{ dl }}</th>{% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for t,tl in times %}
+                            <tr>
+                                <td class="text-muted fw-semibold">{{ tl }}</td>
+                                {% for d,dl in days %}
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="available_slots" value="{{ d }}_{{ t }}">
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr>
+                    <p class="text-muted small mb-2">WhatsApp alerts — optional, set up now or later:</p>
+                    {% set dial_codes = [
+                        ('+44','🇬🇧 +44 United Kingdom'),
+                        ('+353','🇮🇪 +353 Ireland'),
+                        ('+1','🇺🇸 +1 USA / Canada'),
+                        ('+33','🇫🇷 +33 France'),
+                        ('+49','🇩🇪 +49 Germany'),
+                        ('+34','🇪🇸 +34 Spain'),
+                        ('+31','🇳🇱 +31 Netherlands'),
+                        ('+32','🇧🇪 +32 Belgium'),
+                        ('+41','🇨🇭 +41 Switzerland'),
+                        ('+43','🇦🇹 +43 Austria'),
+                        ('+61','🇦🇺 +61 Australia'),
+                        ('+64','🇳🇿 +64 New Zealand'),
+                        ('+27','🇿🇦 +27 South Africa'),
+                        ('+971','🇦🇪 +971 UAE'),
+                        ('+91','🇮🇳 +91 India'),
+                        ('+55','🇧🇷 +55 Brazil'),
+                        ('+52','🇲🇽 +52 Mexico'),
+                        ('+54','🇦🇷 +54 Argentina'),
+                    ] %}
+                    {% set timezones = [
+                        ('Pacific/Honolulu','UTC-10 — Hawaii'),
+                        ('America/Los_Angeles','UTC-8/7 — US Pacific'),
+                        ('America/Denver','UTC-7/6 — US Mountain'),
+                        ('America/Chicago','UTC-6/5 — US Central'),
+                        ('America/New_York','UTC-5/4 — US Eastern'),
+                        ('America/Sao_Paulo','UTC-3 — Brazil'),
+                        ('Atlantic/Azores','UTC-1 — Azores'),
+                        ('Europe/London','UTC+0/1 — UK (default)'),
+                        ('Europe/Paris','UTC+1/2 — France / Germany / Spain'),
+                        ('Europe/Athens','UTC+2/3 — Greece / Eastern Europe'),
+                        ('Europe/Moscow','UTC+3 — Russia (Moscow)'),
+                        ('Asia/Dubai','UTC+4 — UAE / Gulf'),
+                        ('Asia/Kolkata','UTC+5:30 — India'),
+                        ('Asia/Singapore','UTC+8 — Singapore / HK'),
+                        ('Asia/Tokyo','UTC+9 — Japan'),
+                        ('Australia/Sydney','UTC+10/11 — Australia East'),
+                        ('Pacific/Auckland','UTC+12/13 — New Zealand'),
+                    ] %}
+                    <div class="mb-2">
+                        <label class="form-label">Phone / WhatsApp</label>
+                        <div class="d-flex gap-2">
+                            <select name="whatsapp_dial_code" class="form-select" style="width:auto;flex-shrink:0;">
+                                {% for code, label in dial_codes %}
+                                <option value="{{ code }}" {% if code == '+44' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="whatsapp_number" class="form-control" placeholder="07700900000">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
+                                   id="wa_enabled_reg" role="switch">
+                            <label class="form-check-label" for="wa_enabled_reg">Enable WhatsApp alerts?</label>
+                        </div>
+                    </div>
+                    <div class="mb-3 ms-1 d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_today" id="wa_today_reg" checked>
+                            <label class="form-check-label" for="wa_today_reg">Today?</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow" id="wa_tomorrow_reg">
+                            <label class="form-check-label" for="wa_tomorrow_reg">Tomorrow?</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_day_after" id="wa_dayafter_reg">
+                            <label class="form-check-label" for="wa_dayafter_reg">Day after?</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Time Zone</label>
+                        <select name="timezone" class="form-select">
+                            {% for tz, label in timezones %}
+                            <option value="{{ tz }}" {% if tz == 'Europe/London' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100">Create Account</button>
                 </form>
 

@@ -20,12 +20,36 @@
             <div class="card-body">
                 <table class="table table-sm mb-0">
                     <tr><td class="text-muted">Email</td><td>{{ user.email }}</td></tr>
-                    <tr><td class="text-muted">Phone / WhatsApp</td><td>{{ user.whatsapp_number or '—' }}</td></tr>
+                    <tr>
+                        <td class="text-muted">Phone / WhatsApp</td>
+                        <td>
+                            {% if user.whatsapp_number %}
+                                {{ user.whatsapp_dial_code or '+44' }} {{ user.whatsapp_number }}
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">WhatsApp alerts</td>
+                        <td>
+                            {% if user.whatsapp_enabled %}
+                                <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                            <div class="mt-1 d-flex gap-1">
+                                <span class="badge {% if user.whatsapp_today %}bg-success{% else %}bg-secondary{% endif %}">Today</span>
+                                <span class="badge {% if user.whatsapp_tomorrow %}bg-success{% else %}bg-secondary{% endif %}">Tomorrow</span>
+                                <span class="badge {% if user.whatsapp_day_after %}bg-success{% else %}bg-secondary{% endif %}">Day after</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td class="text-muted">Time zone</td><td>{{ user.timezone or 'Europe/London' }}</td></tr>
                     <tr><td class="text-muted">Weight</td><td>{{ user.weight_kg }} kg</td></tr>
                     <tr><td class="text-muted">Wind range</td><td>{{ user.min_wind | int }}–{{ user.max_wind | int }} knots</td></tr>
                     <tr>
-                        <td class="text-muted" style="vertical-align:top;">Availability</td>
+                        <td class="text-muted" style="vertical-align:top;">Times I can kite</td>
                         <td>
+                            <p class="text-muted small mb-2">Morning is sunrise to 12pm, afternoon is 12pm to 6pm or sunset (whichever is earlier), and evening is 6pm to sunset.</p>
                             {% set slots = user.available_slots.split(',') if user.available_slots else [] %}
                             {% set days = [('mon','Mon'),('tue','Tue'),('wed','Wed'),('thu','Thu'),('fri','Fri'),('sat','Sat'),('sun','Sun')] %}
                             {% set times = [('morning','AM'),('afternoon','PM'),('evening','Eve')] %}
@@ -151,11 +175,90 @@
                                    value="{{ user.last_name }}" required>
                         </div>
                     </div>
+                    {% set dial_codes = [
+                        ('+44','🇬🇧 +44 United Kingdom'),
+                        ('+353','🇮🇪 +353 Ireland'),
+                        ('+1','🇺🇸 +1 USA / Canada'),
+                        ('+33','🇫🇷 +33 France'),
+                        ('+49','🇩🇪 +49 Germany'),
+                        ('+34','🇪🇸 +34 Spain'),
+                        ('+31','🇳🇱 +31 Netherlands'),
+                        ('+32','🇧🇪 +32 Belgium'),
+                        ('+41','🇨🇭 +41 Switzerland'),
+                        ('+43','🇦🇹 +43 Austria'),
+                        ('+61','🇦🇺 +61 Australia'),
+                        ('+64','🇳🇿 +64 New Zealand'),
+                        ('+27','🇿🇦 +27 South Africa'),
+                        ('+971','🇦🇪 +971 UAE'),
+                        ('+91','🇮🇳 +91 India'),
+                        ('+55','🇧🇷 +55 Brazil'),
+                        ('+52','🇲🇽 +52 Mexico'),
+                        ('+54','🇦🇷 +54 Argentina'),
+                    ] %}
+                    {% set timezones = [
+                        ('Pacific/Honolulu','UTC-10 — Hawaii'),
+                        ('America/Los_Angeles','UTC-8/7 — US Pacific'),
+                        ('America/Denver','UTC-7/6 — US Mountain'),
+                        ('America/Chicago','UTC-6/5 — US Central'),
+                        ('America/New_York','UTC-5/4 — US Eastern'),
+                        ('America/Sao_Paulo','UTC-3 — Brazil'),
+                        ('Atlantic/Azores','UTC-1 — Azores'),
+                        ('Europe/London','UTC+0/1 — UK (default)'),
+                        ('Europe/Paris','UTC+1/2 — France / Germany / Spain'),
+                        ('Europe/Athens','UTC+2/3 — Greece / Eastern Europe'),
+                        ('Europe/Moscow','UTC+3 — Russia (Moscow)'),
+                        ('Asia/Dubai','UTC+4 — UAE / Gulf'),
+                        ('Asia/Kolkata','UTC+5:30 — India'),
+                        ('Asia/Singapore','UTC+8 — Singapore / HK'),
+                        ('Asia/Tokyo','UTC+9 — Japan'),
+                        ('Australia/Sydney','UTC+10/11 — Australia East'),
+                        ('Pacific/Auckland','UTC+12/13 — New Zealand'),
+                    ] %}
                     <div class="mb-3">
                         <label class="form-label">Phone / WhatsApp</label>
-                        <input type="text" name="whatsapp_number" class="form-control"
-                               value="{{ user.whatsapp_number or '' }}"
-                               placeholder="+447700900000">
+                        <div class="d-flex gap-2">
+                            <select name="whatsapp_dial_code" class="form-select" style="width:auto;flex-shrink:0;">
+                                {% for code, label in dial_codes %}
+                                <option value="{{ code }}" {% if (user.whatsapp_dial_code or '+44') == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="whatsapp_number" class="form-control"
+                                   value="{{ user.whatsapp_number or '' }}"
+                                   placeholder="07700900000">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
+                                   id="wa_enabled_modal" role="switch"
+                                   {% if user.whatsapp_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="wa_enabled_modal">Enable WhatsApp alerts?</label>
+                        </div>
+                    </div>
+                    <div class="mb-3 ms-1 d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_today"
+                                   id="wa_today_modal" {% if user.whatsapp_today %}checked{% endif %}>
+                            <label class="form-check-label" for="wa_today_modal">Today?</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow"
+                                   id="wa_tomorrow_modal" {% if user.whatsapp_tomorrow %}checked{% endif %}>
+                            <label class="form-check-label" for="wa_tomorrow_modal">Tomorrow?</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="whatsapp_day_after"
+                                   id="wa_dayafter_modal" {% if user.whatsapp_day_after %}checked{% endif %}>
+                            <label class="form-check-label" for="wa_dayafter_modal">Day after?</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Time Zone</label>
+                        <select name="timezone" class="form-select">
+                            {% for tz, label in timezones %}
+                            <option value="{{ tz }}" {% if (user.timezone or 'Europe/London') == tz %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Weight (kg)</label>
@@ -175,7 +278,8 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Availability</label>
+                        <label class="form-label">Times I can kite</label>
+                        <p class="text-muted small mb-2">Morning is sunrise to 12pm, afternoon is 12pm to 6pm or sunset (whichever is earlier), and evening is 6pm to sunset.</p>
                         {% set slots = user.available_slots.split(',') if user.available_slots else [] %}
                         {% set days = [('mon','Mon'),('tue','Tue'),('wed','Wed'),('thu','Thu'),('fri','Fri'),('sat','Sat'),('sun','Sun')] %}
                         {% set times = [('morning','Morning'),('afternoon','Afternoon'),('evening','Evening')] %}
