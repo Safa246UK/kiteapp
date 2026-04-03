@@ -1,5 +1,5 @@
 """
-Alert logic for KiteApp WhatsApp notifications.
+Alert logic for WindChaser WhatsApp notifications.
 
 For each user with whatsapp_enabled=True:
   - Check each "Alert Me" spot for today / tomorrow / day after
@@ -128,7 +128,7 @@ def build_alert_message(alerts, app_url=''):
             by_day[lbl] = []
         by_day[lbl].append(a)
 
-    lines = ['🪁 *KiteApp* – your conditions update\n']
+    lines = ['🪁 *WindChaser* – your conditions update\n']
     for lbl in days_seen:
         lines.append(f"*{lbl}*")
         for a in by_day[lbl]:

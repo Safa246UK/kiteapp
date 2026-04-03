@@ -32,6 +32,13 @@
   - Admin tables need mobile-friendly layout (stacked rows or horizontal scroll)
   - Full test pass on 390px-wide viewport
 
+## Progressive Web App (PWA)
+- **Web App Manifest** — small JSON file declaring app name, icons, theme colour, and launch behaviour; enables "Add to Home Screen" on iOS and Android so the app appears as a native app icon
+- **Service Worker** — JavaScript file that caches the app shell for fast loading and offline use; particularly valuable at the beach where signal can be patchy
+- **Full offline support** — cache the last known forecast data so users can view conditions even without a connection (more complex; tackle after basic PWA shell)
+- **Push notifications** — longer term, could replace or supplement WhatsApp alerts entirely (requires additional infrastructure)
+- Estimated effort: manifest + basic service worker ~half a day; full offline support 1–2 days
+
 ## Deployment
 - Deploy to Render.com with PostgreSQL (replace SQLite)
 - Set up GitHub Actions for scheduled daily conditions check (to trigger WhatsApp alerts)

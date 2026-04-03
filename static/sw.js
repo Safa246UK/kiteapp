@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gonekiting-v1';
+const CACHE_NAME = 'windchaser-v1';
 const STATIC_ASSETS = ['/', '/static/manifest.json'];
 
 // Install — cache static assets
@@ -35,7 +35,7 @@ self.addEventListener('fetch', event => {
 
 // Push notification received from server
 self.addEventListener('push', event => {
-    let data = { title: '🪁 GoneKiting', body: 'Conditions update available', url: '/' };
+    let data = { title: '🪁 WindChaser', body: 'Conditions update available', url: '/' };
     if (event.data) {
         try { data = Object.assign(data, JSON.parse(event.data.text())); } catch (e) {}
     }
@@ -46,7 +46,7 @@ self.addEventListener('push', event => {
             badge: '/static/icon-192.svg',
             data: { url: data.url },
             vibrate: [200, 100, 200],
-            tag: 'gonekiting-conditions',   // replaces previous notification of same type
+            tag: 'windchaser-conditions',   // replaces previous notification of same type
             renotify: true
         })
     );

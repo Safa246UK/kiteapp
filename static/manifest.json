@@ -1,6 +1,6 @@
 {
-  "name": "GoneKiting",
-  "short_name": "GoneKiting",
+  "name": "WindChaser",
+  "short_name": "WindChaser",
   "description": "Kite surfing conditions and alerts",
   "start_url": "/",
   "display": "standalone",

@@ -111,7 +111,7 @@ def send_push_to_user(user, title, body, url='/'):
                 },
                 data=payload,
                 vapid_private_key=private_key,
-                vapid_claims={'sub': 'mailto:admin@gonekiting.com'}
+                vapid_claims={'sub': 'mailto:admin@windchaser.com'}
             )
             sent += 1
         except WebPushException as e:

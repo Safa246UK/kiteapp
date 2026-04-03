@@ -118,18 +118,18 @@ def forgot_password():
         if user:
             token = generate_reset_token(email)
             reset_url = url_for('auth.reset_password', token=token, _external=True)
-            msg = Message('KiteApp — Reset Your Password',
+            msg = Message('WindChaser — Reset Your Password',
                           recipients=[email])
             msg.body = f"""Hi {user.name},
 
-You requested a password reset for your KiteApp account.
+You requested a password reset for your WindChaser account.
 
 Click the link below to set a new password (valid for 1 hour):
 {reset_url}
 
 If you did not request this, you can safely ignore this email.
 
-— The KiteApp Team
+— The WindChaser Team
 """
             try:
                 _mail().send(msg)

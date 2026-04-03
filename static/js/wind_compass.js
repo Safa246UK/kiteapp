@@ -1,5 +1,5 @@
 /**
- * WindCompass — interactive 16-point compass picker for KiteApp
+ * WindCompass — interactive 16-point compass picker for WindChaser
  * Usage (editable):  new WindCompass('container-id')
  * Usage (read-only): new WindCompass('container-id', { readOnly: true, size: 200 })
  */
