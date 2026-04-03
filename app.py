@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_login import LoginManager
 from flask_mail import Mail
 from models import db, User
@@ -46,11 +46,22 @@ from auth import auth
 from main import main
 from spots import spots
 from admin import admin_bp
+from push import push_bp
 
 app.register_blueprint(auth)
 app.register_blueprint(main)
 app.register_blueprint(spots)
 app.register_blueprint(admin_bp)
+app.register_blueprint(push_bp)
+
+# Serve service worker from root so it has full scope
+@app.route('/sw.js')
+def sw():
+    return send_from_directory('static', 'sw.js', mimetype='application/javascript')
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
 
 if __name__ == '__main__':
     with app.app_context():

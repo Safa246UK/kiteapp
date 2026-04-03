@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🪁 KiteApp</title>
+    <title>🪁 GoneKiting</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="apple-touch-icon" href="/static/icon-192.svg">
     <!-- Bootstrap for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet for maps -->
@@ -13,13 +17,14 @@
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">🪁 KiteApp</a>
+            <a class="navbar-brand" href="/">🪁 GoneKiting</a>
             <div>
                 {% if current_user.is_authenticated %}
                     <span class="text-light me-3">Hi, {{ current_user.name }}</span>
                     <a href="{{ url_for('main.index') }}" class="btn btn-outline-light btn-sm me-2">My Spots</a>
                     <a href="{{ url_for('spots.index') }}" class="btn btn-outline-light btn-sm me-2">Find Spots</a>
                     <a href="/profile" class="btn btn-outline-light btn-sm me-2">Profile</a>
+                    <button id="notif-btn" class="btn btn-outline-light btn-sm me-2" onclick="enableNotifications()">🔔 Enable alerts</button>
                     {% if current_user.is_admin %}
                         <a href="{{ url_for('spots.manage') }}" class="btn btn-warning btn-sm me-2">Manage Spots</a>
                         <a href="{{ url_for('admin_bp.users') }}" class="btn btn-warning btn-sm me-2">Manage Users</a>
@@ -43,5 +48,72 @@
         {% block content %}{% endblock %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- PWA: register service worker + push notifications -->
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+        navigator.serviceWorker.register('/sw.js').then(async reg => {
+            const sub = await reg.pushManager.getSubscription();
+            updateNotifButton(sub);
+        }).catch(e => console.warn('SW registration failed:', e));
+    })();
+
+    function urlBase64ToUint8Array(b64) {
+        const pad = '='.repeat((4 - b64.length % 4) % 4);
+        const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+
+    async function enableNotifications() {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            alert('Notification permission was denied.');
+            return;
+        }
+        const reg = await navigator.serviceWorker.ready;
+        const resp = await fetch('/push/vapid-public-key');
+        const { publicKey } = await resp.json();
+        const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+        await fetch('/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub.toJSON())
+        });
+        updateNotifButton(sub);
+    }
+
+    async function disableNotifications() {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            await fetch('/push/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: sub.endpoint })
+            });
+            await sub.unsubscribe();
+        }
+        updateNotifButton(null);
+    }
+
+    function updateNotifButton(sub) {
+        const btn = document.getElementById('notif-btn');
+        if (!btn) return;
+        if (sub) {
+            btn.textContent = '🔔 Alerts on';
+            btn.className = 'btn btn-success btn-sm me-2';
+            btn.onclick = disableNotifications;
+        } else {
+            btn.textContent = '🔔 Enable alerts';
+            btn.className = 'btn btn-outline-light btn-sm me-2';
+            btn.onclick = enableNotifications;
+        }
+    }
+    </script>
 </body>
 </html>

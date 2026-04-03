@@ -149,6 +149,19 @@ class WeatherCache(db.Model):
     day_summary_json = db.Column(db.Text, nullable=True)  # {"2026-04-01": {"colour": "green", "hours": 5}, ...}
 
 
+class PushSubscription(db.Model):
+    """Stores a browser push subscription for a user (one per device)."""
+    __tablename__ = 'push_subscription'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    endpoint   = db.Column(db.Text, nullable=False, unique=True)
+    p256dh     = db.Column(db.Text, nullable=False)   # browser public key
+    auth       = db.Column(db.Text, nullable=False)   # auth secret
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='push_subscriptions')
+
+
 class AdminSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     max_favourite_spots = db.Column(db.Integer, default=3)
