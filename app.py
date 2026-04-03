@@ -8,8 +8,17 @@ from models import db, User
 from extensions import bcrypt
 
 app = Flask(__name__)
-_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'kiteapp.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{_db_path}'
+
+# Use PostgreSQL if DATABASE_URL is set (production), otherwise SQLite (local dev)
+_db_url = os.environ.get('DATABASE_URL')
+if _db_url:
+    # Render sometimes provides postgres:// — SQLAlchemy requires postgresql://
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+else:
+    _db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'kiteapp.db')
+    _db_url = f'sqlite:///{_db_path}'
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-later')
 
