@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🪁 Welcome to WindChaser</title>
+    <title>Welcome to WindChaser</title>
     <link rel="icon" type="image/png" href="/static/icon-192.png">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -76,7 +76,7 @@
 <!-- Hero -->
 <div class="hero">
     <img src="/static/icon-192.png" alt="WindChaser icon">
-    <h1>🪁 WindChaser</h1>
+    <h1>WindChaser</h1>
     <p>Know when the wind is right. Never miss a session.</p>
 </div>
 
@@ -114,7 +114,7 @@
     <!-- Why register? -->
     <div class="section">
         <h2>Why do I need to register?</h2>
-        <p class="text-muted">WindChaser is personalised — everything is tied to <em>your</em> spots, <em>your</em> wind range, and <em>your</em> schedule. A free account lets us:</p>
+        <p class="text-muted">WindChaser is personalised — everything is tied to <em>your</em> spots, <em>your</em> wind range, and <em>your</em> schedule. An account lets us:</p>
         <ul class="text-muted" style="font-size: 0.95rem; line-height: 1.9;">
             <li>Remember your favourite spots and alert preferences</li>
             <li>Know the right wind window for <em>you</em> (not every kiter is the same!)</li>
@@ -151,7 +151,10 @@
     <!-- Install on phone -->
     <div class="section">
         <h2>Install on your phone <span class="badge bg-primary" style="font-size:0.7rem; vertical-align:middle;">Recommended</span></h2>
-        <p class="text-muted mb-3">WindChaser works as a <strong>Progressive Web App (PWA)</strong> — you can add it to your home screen like a native app, for free, without going through the App Store or Google Play. This is also what makes push notifications work.</p>
+        <p class="text-muted mb-2">WindChaser works as a <strong>Progressive Web App (PWA)</strong> — you can add it to your home screen like a native app, without going through the App Store or Google Play. This is also what makes push notifications work.</p>
+        <div class="alert alert-success py-2 px-3 mb-3" style="font-size: 0.9rem;">
+            🔒 <strong>Secure by design:</strong> WindChaser is served entirely over HTTPS. Your login credentials, personal preferences, and alert settings are encrypted in transit and stored securely. We never share your data with third parties.
+        </div>
         <div class="row g-3">
             <div class="col-sm-6">
                 <div class="platform-card">
@@ -196,19 +199,20 @@
 <!-- Sticky CTA bar -->
 <div class="cta-bar">
     <div class="d-flex flex-wrap justify-content-center gap-2">
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4">
-            🚀 Create free account
-        </a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">
-            Already registered? Log in
-        </a>
         {% if current_user and current_user.is_authenticated %}
-        <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary btn-lg px-4">
-            Back to dashboard
-        </a>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg px-4">
+                Back to my dashboard
+            </a>
+        {% else %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4">
+                🚀 Create an account
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">
+                Already registered? Log in
+            </a>
         {% endif %}
     </div>
-    <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;">Free to use · No app store needed · No spam</p>
+    <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;">No app store needed · No spam</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
