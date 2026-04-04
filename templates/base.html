@@ -113,6 +113,10 @@
                 return;
             }
             const reg = await navigator.serviceWorker.ready;
+            // Unsubscribe from any existing subscription (e.g. after a VAPID key change)
+            const existing = await reg.pushManager.getSubscription();
+            if (existing) await existing.unsubscribe();
+
             const resp = await fetch('/push/vapid-public-key');
             if (!resp.ok) throw new Error('Could not load push key');
             const { publicKey } = await resp.json();
