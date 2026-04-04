@@ -81,11 +81,11 @@ def fetch_and_cache_tides(spot, api_key):
             cache.station_lat = lat
         # (will be committed below with the rest of the cache update)
 
-    # Fetch 4 days of tidal events (covers our 3-day forecast window)
+    # Fetch 7 days of tidal events (matches our 7-day forecast window)
     resp = requests.get(
         f"{ADMIRALTY_BASE}/stations/{station_id}/tidalevents",
         headers=_headers(api_key),
-        params={'duration': 4},  # days (allowed range: 1-7)
+        params={'duration': 7},  # days (allowed range: 1-7)
         timeout=15)
     resp.raise_for_status()
     events = resp.json()
@@ -332,7 +332,7 @@ def get_tide_slots(spot, target_dates):
         resp = requests.get(
             f"{ADMIRALTY_BASE}/stations/{station_id}/tidalevents",
             headers=_headers(api_key),
-            params={'duration': 4},
+            params={'duration': 7},
             timeout=10
         )
         resp.raise_for_status()
