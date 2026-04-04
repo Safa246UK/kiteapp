@@ -36,18 +36,29 @@ mail = Mail(app)
 
 def run_migrations():
     """Add any missing columns to existing tables (safe to run on every startup)."""
+    # Only needed for PostgreSQL — SQLite handles this via create_all
+    if 'postgresql' not in str(db.engine.url):
+        return
+    migrations = [
+        ("user", "notification_type", "VARCHAR(10) DEFAULT 'push'"),
+        ("user", "available_slots",   "TEXT"),
+        ("push_subscription", "created_at", "TIMESTAMP"),
+    ]
     with db.engine.connect() as conn:
-        migrations = [
-            "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS notification_type VARCHAR(10) DEFAULT 'push'",
-            "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS available_slots TEXT",
-            "ALTER TABLE push_subscription ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
-        ]
-        for sql in migrations:
-            try:
-                conn.execute(db.text(sql))
-            except Exception:
-                pass
-        conn.commit()
+        for table, column, col_type in migrations:
+            # Check if column already exists before trying to add it
+            exists = conn.execute(db.text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name=:t AND column_name=:c"
+            ), {"t": table, "c": column}).fetchone()
+            if not exists:
+                try:
+                    conn.execute(db.text(
+                        f'ALTER TABLE "{table}" ADD COLUMN {column} {col_type}'
+                    ))
+                    conn.commit()
+                except Exception as e:
+                    print(f"Migration warning ({table}.{column}): {e}")
 
 with app.app_context():
     db.create_all()
