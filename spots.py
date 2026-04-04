@@ -108,16 +108,30 @@ def detail(spot_id):
     ).all()
     is_favourite = UserFavouriteSpot.query.filter_by(user_id=current_user.id, spot_id=spot_id).first()
 
-    # If no weather cache exists yet, fetch now
-    if not WeatherCache.query.filter_by(spot_id=spot_id).first():
+    from datetime import datetime, timedelta
+
+    # Refresh weather if missing or older than 3 hours
+    w_cache = WeatherCache.query.filter_by(spot_id=spot_id).first()
+    weather_stale = (
+        not w_cache or
+        w_cache.fetched_at is None or
+        w_cache.fetched_at < datetime.utcnow() - timedelta(hours=3)
+    )
+    if weather_stale:
         try:
             from weather import fetch_and_cache_weather
             fetch_and_cache_weather(spot)
         except Exception as e:
             print(f"[Weather] On-demand fetch failed: {e}")
 
-    # If no tide cache exists yet, fetch now
-    if not TideCache.query.filter_by(spot_id=spot_id).first():
+    # Refresh tides if missing or older than 12 hours (API has daily limits)
+    t_cache = TideCache.query.filter_by(spot_id=spot_id).first()
+    tides_stale = (
+        not t_cache or
+        t_cache.fetched_at is None or
+        t_cache.fetched_at < datetime.utcnow() - timedelta(hours=12)
+    )
+    if tides_stale:
         try:
             from tides import fetch_and_cache_tides
             api_key = os.environ.get('ADMIRALTY_API_KEY', '')
