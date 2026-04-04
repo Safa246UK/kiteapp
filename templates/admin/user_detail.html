@@ -32,7 +32,7 @@
                         <td class="text-muted">Alerts</td>
                         <td>
                             {% set nt = user.notification_type or 'push' %}
-                            {% if nt == 'push' %}<span class="badge bg-primary">🔔 Phone</span>
+                            {% if nt == 'push' %}<span class="badge bg-primary">🔔 Phone App</span>
                             {% elif nt == 'whatsapp' %}<span class="badge bg-success">💬 WhatsApp</span>
                             {% elif nt == 'both' %}<span class="badge bg-info">🔔💬 Both</span>
                             {% else %}<span class="badge bg-secondary">🔕 None</span>
@@ -233,7 +233,7 @@
                         <div class="btn-group d-flex" role="group">
                             <input type="radio" class="btn-check" name="notification_type" id="notif_push_modal" value="push"
                                    {% if (user.notification_type or 'push') == 'push' %}checked{% endif %}>
-                            <label class="btn btn-outline-primary" for="notif_push_modal">🔔 Phone</label>
+                            <label class="btn btn-outline-primary" for="notif_push_modal">🔔 Phone App</label>
 
                             <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp"
                                    {% if user.notification_type == 'whatsapp' %}checked{% endif %}>

@@ -51,7 +51,7 @@
                 <th>Email</th>
                 <th>Name</th>
                 <th>Phone / WhatsApp</th>
-                <th>WA Alerts</th>
+                <th>Alerts</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th></th>
@@ -68,15 +68,19 @@
                     {% else %}—{% endif %}
                 </td>
                 <td>
-                    {% if user.whatsapp_enabled %}
-                        <span class="badge bg-success">On</span>
+                    {% set nt = user.notification_type or 'push' %}
+                    {% if nt == 'none' %}
+                        <span class="badge bg-secondary">🔕 Off</span>
+                    {% else %}
+                        {% if nt == 'push' %}<span class="badge bg-primary">🔔 Phone App</span>
+                        {% elif nt == 'whatsapp' %}<span class="badge bg-success">💬 WhatsApp</span>
+                        {% elif nt == 'both' %}<span class="badge bg-info">🔔💬 Both</span>
+                        {% endif %}
                         <div class="d-flex gap-1 mt-1">
                             <span class="badge {% if user.whatsapp_today %}bg-success{% else %}bg-secondary{% endif %}">Today</span>
                             <span class="badge {% if user.whatsapp_tomorrow %}bg-success{% else %}bg-secondary{% endif %}">Tom</span>
                             <span class="badge {% if user.whatsapp_day_after %}bg-success{% else %}bg-secondary{% endif %}">+2</span>
                         </div>
-                    {% else %}
-                        <span class="badge bg-secondary">Off</span>
                     {% endif %}
                 </td>
                 <td>
