@@ -104,10 +104,17 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON())
         });
-        // Hide the prompt — subscription successful
+        // Swap the prompt for a success message, then fade it out
         const prompt = document.getElementById('push-prompt');
-        if (prompt) prompt.style.display = 'none';
-        alert('✅ Alerts enabled on this device!');
+        if (prompt) {
+            prompt.className = 'alert alert-success d-flex align-items-center';
+            prompt.innerHTML = '✅ <strong class="ms-2">Alerts enabled on this device!</strong>';
+            setTimeout(() => {
+                prompt.style.transition = 'opacity 0.8s';
+                prompt.style.opacity = '0';
+                setTimeout(() => { prompt.style.display = 'none'; }, 800);
+            }, 2000);
+        }
     }
     </script>
 </body>
