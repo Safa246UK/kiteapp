@@ -45,9 +45,10 @@ self.addEventListener('push', event => {
             icon: '/static/icon-192.png',
             badge: '/static/icon-192.png',
             data: { url: data.url },
-            vibrate: [200, 100, 200],
+            vibrate: [300, 100, 300, 100, 300],
             tag: 'windchaser-conditions',   // replaces previous notification of same type
-            renotify: true
+            renotify: true,
+            requireInteraction: true        // keeps notification on screen until dismissed
         })
     );
 });

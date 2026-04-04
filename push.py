@@ -115,7 +115,9 @@ def send_push_to_user(user, title, body, url='/'):
                 },
                 data=payload,
                 vapid_private_key=private_key,
-                vapid_claims={'sub': 'mailto:admin@windchaser.com'}
+                vapid_claims={'sub': 'mailto:admin@windchaser.com'},
+                headers={'Urgency': 'high'},
+                ttl=3600,   # keep in push server queue for up to 1 hour if device offline
             )
             sent += 1
         except WebPushException as e:
