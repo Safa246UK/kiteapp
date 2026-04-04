@@ -42,8 +42,8 @@ self.addEventListener('push', event => {
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.body,
-            icon: '/static/icon-192.svg',
-            badge: '/static/icon-192.svg',
+            icon: '/static/icon-192.png',
+            badge: '/static/icon-192.png',
             data: { url: data.url },
             vibrate: [200, 100, 200],
             tag: 'windchaser-conditions',   // replaces previous notification of same type
