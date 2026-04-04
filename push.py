@@ -24,8 +24,22 @@ log = logging.getLogger(__name__)
 
 
 def _private_key():
-    """Read VAPID private key from env, converting escaped \\n to real newlines."""
-    return os.environ.get('VAPID_PRIVATE_KEY', '').replace('\\n', '\n')
+    """Read VAPID private key from env.
+
+    Supports two formats:
+    - Single-line base64 DER (preferred — no newline issues in env vars)
+    - Full PEM string with \\n escape sequences (legacy)
+    """
+    raw = os.environ.get('VAPID_PRIVATE_KEY', '').strip()
+    if not raw:
+        return ''
+    # Already a PEM block
+    if raw.startswith('-----'):
+        return raw.replace('\\n', '\n')
+    # Single-line base64 DER — reconstruct PEM so pywebpush can parse it
+    import textwrap
+    body = '\n'.join(textwrap.wrap(raw, 64))
+    return f'-----BEGIN PRIVATE KEY-----\n{body}\n-----END PRIVATE KEY-----'
 
 
 def _public_key():
