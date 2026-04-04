@@ -113,7 +113,7 @@ def send_all_alerts():
     if sent:    parts.append(f'{sent} sent')
     if skipped: parts.append(f'{skipped} had nothing to report')
     if failed:  parts.append(f'{failed} failed')
-    flash('Alerts: ' + ', '.join(parts) if parts else 'No users with WhatsApp enabled.', 'info')
+    flash('Alerts: ' + ', '.join(parts) if parts else 'No users with alerts enabled.', 'info')
     return redirect(url_for('admin_bp.users'))
 
 

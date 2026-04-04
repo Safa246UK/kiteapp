@@ -32,12 +32,15 @@ def get_alerts_for_user(user):
     now    = datetime.now()
     alerts = []
 
+    # Use whatsapp day-flags as general "which days to alert" preference.
+    # If none are set (e.g. push-only users who never configured WhatsApp),
+    # default to today + tomorrow so they still receive alerts.
     days_to_check = []
     if user.whatsapp_today:     days_to_check.append(0)
     if user.whatsapp_tomorrow:  days_to_check.append(1)
     if user.whatsapp_day_after: days_to_check.append(2)
     if not days_to_check:
-        return []
+        days_to_check = [0, 1]  # default: today and tomorrow
 
     favs = UserFavouriteSpot.query.filter_by(user_id=user.id, is_active=True).all()
     if not favs:
@@ -205,7 +208,8 @@ def send_all_alerts(app_url=''):
     """
     users = User.query.filter(
         User.is_active == True,
-        User.notification_type.notin_(['none', None])
+        User.notification_type.isnot(None),
+        User.notification_type != 'none'
     ).all()
     results = []
     for user in users:
