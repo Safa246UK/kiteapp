@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask, send_from_directory, render_template, make_response, redirect, url_for
+from flask import Flask, send_from_directory, render_template, make_response, redirect, url_for, request
 from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from models import db, User
@@ -94,6 +94,21 @@ def welcome():
     resp = make_response(render_template('welcome.html'))
     resp.set_cookie('seen_welcome', '1', max_age=60*60*24*365)  # remember for 1 year
     return resp
+
+
+# Redirect first-time visitors to welcome BEFORE Flask-Login can flash "please log in"
+@app.before_request
+def redirect_first_time_visitors():
+    # Skip: already seen welcome, or static/infrastructure endpoints
+    if request.cookies.get('seen_welcome'):
+        return
+    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome'}
+    if request.endpoint in skip_endpoints:
+        return
+    # Logged-in users never need the welcome detour
+    if current_user.is_authenticated:
+        return
+    return redirect(url_for('welcome'))
 
 # Serve service worker from root so it has full scope
 @app.route('/sw.js')

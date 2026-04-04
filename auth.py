@@ -31,9 +31,6 @@ def verify_reset_token(token, max_age=3600):
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
-    # First-time visitor — send to welcome/splash page before login
-    if request.method == 'GET' and not request.cookies.get('seen_welcome'):
-        return redirect(url_for('welcome'))
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
