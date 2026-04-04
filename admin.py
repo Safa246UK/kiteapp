@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
-from models import db, User, Spot, UserFavouriteSpot, AdminSettings
+from models import db, User, Spot, UserFavouriteSpot, AdminSettings, PushSubscription
 from extensions import bcrypt
 
 admin_bp = Blueprint('admin_bp', __name__)
@@ -41,11 +41,13 @@ def user_detail(user_id):
             .all())
     alert_favs = [f for f in favs if f.is_active]
     other_favs  = [f for f in favs if not f.is_active]
+    push_subs   = PushSubscription.query.filter_by(user_id=user_id).order_by(PushSubscription.created_at.desc()).all()
     return render_template('admin/user_detail.html',
                            user=user,
                            created_spots=created_spots,
                            alert_favs=alert_favs,
-                           other_favs=other_favs)
+                           other_favs=other_favs,
+                           push_subs=push_subs)
 
 
 @admin_bp.route('/admin/users/<int:user_id>/edit', methods=['POST'])
