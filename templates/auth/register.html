@@ -98,6 +98,23 @@
                             <label class="btn btn-outline-secondary" for="notif_none_reg">🔕 None</label>
                         </div>
                     </div>
+                    <div class="mb-3 ms-1">
+                        <label class="form-label mb-1">Alert me for:</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="whatsapp_today" id="wa_today_reg" checked>
+                                <label class="form-check-label" for="wa_today_reg">Today</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow" id="wa_tomorrow_reg" checked>
+                                <label class="form-check-label" for="wa_tomorrow_reg">Tomorrow</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="whatsapp_day_after" id="wa_dayafter_reg">
+                                <label class="form-check-label" for="wa_dayafter_reg">Day after</label>
+                            </div>
+                        </div>
+                    </div>
                     <p class="text-muted small mb-2">WhatsApp details — only needed if you selected WhatsApp or Both above:</p>
                     {% set dial_codes = [
                         ('+44','🇬🇧 +44 United Kingdom'),
@@ -154,20 +171,6 @@
                             <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
                                    id="wa_enabled_reg" role="switch">
                             <label class="form-check-label" for="wa_enabled_reg">Enable WhatsApp alerts?</label>
-                        </div>
-                    </div>
-                    <div class="mb-3 ms-1 d-flex gap-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_today" id="wa_today_reg" checked>
-                            <label class="form-check-label" for="wa_today_reg">Today?</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow" id="wa_tomorrow_reg">
-                            <label class="form-check-label" for="wa_tomorrow_reg">Tomorrow?</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_day_after" id="wa_dayafter_reg">
-                            <label class="form-check-label" for="wa_dayafter_reg">Day after?</label>
                         </div>
                     </div>
                     <div class="mb-3">
