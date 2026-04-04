@@ -18,6 +18,7 @@ def send_whatsapp(dial_code, local_number, body):
     from_ = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
     try:
         msg = _client().messages.create(to=to, from_=from_, body=body)
-        return True, msg.sid
+        # Return SID and initial status so admin can see what Twilio reported
+        return True, f"{msg.sid} (status: {msg.status})"
     except Exception as e:
         return False, str(e)
