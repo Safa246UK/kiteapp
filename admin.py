@@ -67,6 +67,7 @@ def edit_user(user_id):
     user.whatsapp_tomorrow  = 'whatsapp_tomorrow'  in request.form
     user.whatsapp_day_after = 'whatsapp_day_after' in request.form
     user.timezone           = request.form.get('timezone', 'Europe/London')
+    user.notification_type  = request.form.get('notification_type', 'push')
     slots = request.form.getlist('available_slots')
     if slots:
         user.available_slots = ','.join(slots)

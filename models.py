@@ -31,6 +31,8 @@ class User(db.Model, UserMixin):
     whatsapp_tomorrow   = db.Column(db.Boolean,     default=False)
     whatsapp_day_after  = db.Column(db.Boolean,     default=False)
     timezone            = db.Column(db.String(50),  default='Europe/London')
+    # How the user wants to receive alerts: 'push', 'whatsapp', 'both', 'none'
+    notification_type   = db.Column(db.String(10),  default='push')
 
     @property
     def name(self):

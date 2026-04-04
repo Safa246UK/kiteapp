@@ -66,6 +66,7 @@ def register():
         whatsapp_tomorrow  = 'whatsapp_tomorrow'  in request.form
         whatsapp_day_after = 'whatsapp_day_after' in request.form
         timezone           = request.form.get('timezone', 'Europe/London')
+        notification_type  = request.form.get('notification_type', 'push')
 
         if not first_name or not last_name:
             flash('Please enter your first name and surname.', 'danger')
@@ -95,7 +96,8 @@ def register():
                     whatsapp_today=whatsapp_today,
                     whatsapp_tomorrow=whatsapp_tomorrow,
                     whatsapp_day_after=whatsapp_day_after,
-                    timezone=timezone)
+                    timezone=timezone,
+                    notification_type=notification_type)
         db.session.add(user)
 
         if is_first_user and not AdminSettings.query.first():

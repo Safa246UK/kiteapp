@@ -157,21 +157,41 @@ def build_alert_message(alerts, app_url=''):
 # ---------------------------------------------------------------------------
 
 def send_alerts_for_user(user, app_url=''):
-    """Compute and send alerts for one user.
+    """Compute and send alerts for one user via their chosen notification channel(s).
 
     Returns (sent: bool, detail: str).
     """
-    if not user.whatsapp_enabled or not user.whatsapp_number:
-        return False, 'WhatsApp not enabled or no number saved'
+    ntype = user.notification_type or 'none'
+    if ntype == 'none':
+        return False, 'Notifications disabled'
 
     alerts  = get_alerts_for_user(user)
     message = build_alert_message(alerts, app_url)
-
     if not message:
         return False, 'No qualifying conditions to report'
 
-    from whatsapp import send_whatsapp
-    return send_whatsapp(user.whatsapp_dial_code or '+44', user.whatsapp_number, message)
+    results = []
+
+    if ntype in ('whatsapp', 'both'):
+        if user.whatsapp_number:
+            from whatsapp import send_whatsapp
+            ok, detail = send_whatsapp(user.whatsapp_dial_code or '+44', user.whatsapp_number, message)
+            results.append(f"WhatsApp: {'sent' if ok else detail}")
+        else:
+            results.append('WhatsApp: no number saved')
+
+    if ntype in ('push', 'both'):
+        from push import send_push_to_user
+        ok, detail = send_push_to_user(
+            user,
+            '🪁 WindChaser – conditions update',
+            message,
+            app_url
+        )
+        results.append(f"Push: {'sent' if ok else detail}")
+
+    sent = any('sent' in r for r in results)
+    return sent, ' | '.join(results)
 
 
 # ---------------------------------------------------------------------------
@@ -179,11 +199,14 @@ def send_alerts_for_user(user, app_url=''):
 # ---------------------------------------------------------------------------
 
 def send_all_alerts(app_url=''):
-    """Send alerts to every user with whatsapp_enabled=True.
+    """Send alerts to every user who has notifications enabled.
 
     Returns list of (user, sent, detail) tuples.
     """
-    users   = User.query.filter_by(whatsapp_enabled=True, is_active=True).all()
+    users = User.query.filter(
+        User.is_active == True,
+        User.notification_type.notin_(['none', None])
+    ).all()
     results = []
     for user in users:
         sent, detail = send_alerts_for_user(user, app_url)

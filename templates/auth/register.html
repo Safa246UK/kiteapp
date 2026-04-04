@@ -81,7 +81,24 @@
                         </table>
                     </div>
                     <hr>
-                    <p class="text-muted small mb-2">WhatsApp alerts — optional, set up now or later:</p>
+                    <p class="text-muted small mb-2">Alerts — how would you like to be notified when conditions are good?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Alert method</label>
+                        <div class="btn-group d-flex" role="group">
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_push_reg" value="push" checked>
+                            <label class="btn btn-outline-primary" for="notif_push_reg">🔔 Phone</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_wa_reg" value="whatsapp">
+                            <label class="btn btn-outline-success" for="notif_wa_reg">💬 WhatsApp</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_both_reg" value="both">
+                            <label class="btn btn-outline-info" for="notif_both_reg">🔔💬 Both</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_none_reg" value="none">
+                            <label class="btn btn-outline-secondary" for="notif_none_reg">🔕 None</label>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">WhatsApp details — only needed if you selected WhatsApp or Both above:</p>
                     {% set dial_codes = [
                         ('+44','🇬🇧 +44 United Kingdom'),
                         ('+353','🇮🇪 +353 Ireland'),

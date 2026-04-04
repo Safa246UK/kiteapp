@@ -29,12 +29,13 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-muted">WhatsApp alerts</td>
+                        <td class="text-muted">Alerts</td>
                         <td>
-                            {% if user.whatsapp_enabled %}
-                                <span class="badge bg-success">Enabled</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Disabled</span>
+                            {% set nt = user.notification_type or 'push' %}
+                            {% if nt == 'push' %}<span class="badge bg-primary">🔔 Phone</span>
+                            {% elif nt == 'whatsapp' %}<span class="badge bg-success">💬 WhatsApp</span>
+                            {% elif nt == 'both' %}<span class="badge bg-info">🔔💬 Both</span>
+                            {% else %}<span class="badge bg-secondary">🔕 None</span>
                             {% endif %}
                             <div class="mt-1 d-flex gap-1">
                                 <span class="badge {% if user.whatsapp_today %}bg-success{% else %}bg-secondary{% endif %}">Today</span>
@@ -227,29 +228,42 @@
                                    placeholder="07700900000">
                         </div>
                     </div>
-                    <div class="mb-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
-                                   id="wa_enabled_modal" role="switch"
-                                   {% if user.whatsapp_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_enabled_modal">Enable WhatsApp alerts?</label>
+                    <div class="mb-3">
+                        <label class="form-label">Alert method</label>
+                        <div class="btn-group d-flex" role="group">
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_push_modal" value="push"
+                                   {% if (user.notification_type or 'push') == 'push' %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="notif_push_modal">🔔 Phone</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp"
+                                   {% if user.notification_type == 'whatsapp' %}checked{% endif %}>
+                            <label class="btn btn-outline-success" for="notif_wa_modal">💬 WhatsApp</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both"
+                                   {% if user.notification_type == 'both' %}checked{% endif %}>
+                            <label class="btn btn-outline-info" for="notif_both_modal">🔔💬 Both</label>
+
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_none_modal" value="none"
+                                   {% if user.notification_type == 'none' %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="notif_none_modal">🔕 None</label>
                         </div>
                     </div>
                     <div class="mb-3 ms-1 d-flex gap-3">
+                        <label class="form-label w-100 mb-1">Alert me for:</label>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="whatsapp_today"
                                    id="wa_today_modal" {% if user.whatsapp_today %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_today_modal">Today?</label>
+                            <label class="form-check-label" for="wa_today_modal">Today</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow"
                                    id="wa_tomorrow_modal" {% if user.whatsapp_tomorrow %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_tomorrow_modal">Tomorrow?</label>
+                            <label class="form-check-label" for="wa_tomorrow_modal">Tomorrow</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="whatsapp_day_after"
                                    id="wa_dayafter_modal" {% if user.whatsapp_day_after %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_dayafter_modal">Day after?</label>
+                            <label class="form-check-label" for="wa_dayafter_modal">Day after</label>
                         </div>
                     </div>
                     <div class="mb-3">
