@@ -251,7 +251,7 @@ def fetch_and_cache_weather(spot):
         'daily':           'sunrise,sunset',
         'wind_speed_unit': 'kn',
         'timezone':        'Europe/London',
-        'forecast_days':   3,
+        'forecast_days':   7,
     }, timeout=10)
     weather_data = weather_resp.json()
 
@@ -262,7 +262,7 @@ def fetch_and_cache_weather(spot):
             'longitude':     spot.longitude,
             'hourly':        'wave_height',
             'timezone':      'Europe/London',
-            'forecast_days': 3,
+            'forecast_days': 7,
         }, timeout=10)
         marine_data = marine_resp.json()
         if 'error' in marine_data:

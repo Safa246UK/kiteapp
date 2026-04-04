@@ -99,6 +99,22 @@ def send_whatsapp(user_id):
     return redirect(url_for('admin_bp.users'))
 
 
+@admin_bp.route('/admin/refresh-weather', methods=['POST'])
+@login_required
+@admin_required
+def refresh_weather():
+    """Manually trigger a weather + tide refresh for all spots."""
+    from scheduler import refresh_all_weather, refresh_all_tides, refresh_all_summaries
+    try:
+        refresh_all_weather()
+        refresh_all_tides()
+        refresh_all_summaries()
+        flash('✅ Weather and tide data refreshed for all spots.', 'success')
+    except Exception as e:
+        flash(f'❌ Refresh failed: {e}', 'danger')
+    return redirect(url_for('admin_bp.users'))
+
+
 @admin_bp.route('/admin/send-all-alerts', methods=['POST'])
 @login_required
 @admin_required
