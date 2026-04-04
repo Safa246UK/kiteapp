@@ -106,13 +106,17 @@ def send_all_alerts():
     from alerts import send_all_alerts as _send_all
     app_url = request.host_url.rstrip('/')
     results = _send_all(app_url)
-    sent    = sum(1 for _, ok, _ in results if ok)
-    skipped = sum(1 for _, ok, detail in results if not ok and 'No qualifying' in detail)
-    failed  = len(results) - sent - skipped
-    parts   = []
-    if sent:    parts.append(f'{sent} sent')
-    if skipped: parts.append(f'{skipped} had nothing to report')
-    if failed:  parts.append(f'{failed} failed')
+    _skip_phrases = ('No qualifying', 'No push subscriptions', 'disabled', 'Notifications disabled')
+    sent_list    = [(u, d) for u, ok, d in results if ok]
+    skipped_list = [(u, d) for u, ok, d in results if not ok and any(p in d for p in _skip_phrases)]
+    failed_list  = [(u, d) for u, ok, d in results if not ok and not any(p in d for p in _skip_phrases)]
+    parts = []
+    if sent_list:    parts.append(f'{len(sent_list)} sent')
+    if skipped_list: parts.append(f'{len(skipped_list)} had nothing to send')
+    if failed_list:
+        parts.append(f'{len(failed_list)} failed')
+        for u, d in failed_list:
+            flash(f'❌ {u.email}: {d}', 'danger')
     flash('Alerts: ' + ', '.join(parts) if parts else 'No users with alerts enabled.', 'info')
     return redirect(url_for('admin_bp.users'))
 
