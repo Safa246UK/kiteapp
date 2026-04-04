@@ -63,6 +63,9 @@
             return;
         }
 
+        // Don't re-show if the user dismissed the prompt this session
+        if (sessionStorage.getItem('push-prompt-dismissed')) return;
+
         navigator.serviceWorker.register('/sw.js').then(async reg => {
             const sub = await reg.pushManager.getSubscription();
             if (!sub) showDashboardPrompt('unsubscribed');
@@ -82,38 +85,61 @@
         if (state === 'unsubscribed' && normal) { normal.style.display = ''; }
     }
 
-    async function enableNotificationsFromDashboard() {
-        if (Notification.permission === 'denied') {
-            showDashboardPrompt('blocked');
-            return;
-        }
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            showDashboardPrompt('blocked');
-            return;
-        }
-        const reg = await navigator.serviceWorker.ready;
-        const resp = await fetch('/push/vapid-public-key');
-        const { publicKey } = await resp.json();
-        const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
-        await fetch('/push/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sub.toJSON())
-        });
-        // Swap the prompt for a success message, then fade it out
+    // Called by the X button — remember dismissal so prompt doesn't reappear on refresh
+    function dismissPushPrompt() {
+        sessionStorage.setItem('push-prompt-dismissed', '1');
         const prompt = document.getElementById('push-prompt');
-        if (prompt) {
-            prompt.className = 'alert alert-success d-flex align-items-center';
-            prompt.innerHTML = '✅ <strong class="ms-2">Alerts enabled on this device!</strong>';
-            setTimeout(() => {
-                prompt.style.transition = 'opacity 0.8s';
-                prompt.style.opacity = '0';
-                setTimeout(() => { prompt.style.display = 'none'; }, 800);
-            }, 2000);
+        if (prompt) prompt.style.display = 'none';
+    }
+
+    async function enableNotificationsFromDashboard() {
+        const prompt = document.getElementById('push-prompt');
+
+        function showError(msg) {
+            if (prompt) {
+                prompt.className = 'alert alert-danger d-flex align-items-center';
+                prompt.innerHTML = '❌ <span class="ms-2">' + msg + '</span>';
+            }
+        }
+
+        try {
+            if (Notification.permission === 'denied') {
+                showDashboardPrompt('blocked');
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                showDashboardPrompt('blocked');
+                return;
+            }
+            const reg = await navigator.serviceWorker.ready;
+            const resp = await fetch('/push/vapid-public-key');
+            if (!resp.ok) throw new Error('Could not load push key');
+            const { publicKey } = await resp.json();
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+            const saveResp = await fetch('/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sub.toJSON())
+            });
+            if (!saveResp.ok) throw new Error('Subscription could not be saved');
+
+            // Success — swap to green confirmation then fade out
+            if (prompt) {
+                prompt.className = 'alert alert-success d-flex align-items-center';
+                prompt.innerHTML = '✅ <strong class="ms-2">Alerts enabled on this device!</strong>';
+                setTimeout(() => {
+                    prompt.style.transition = 'opacity 0.8s';
+                    prompt.style.opacity = '0';
+                    setTimeout(() => { prompt.style.display = 'none'; }, 800);
+                }, 2000);
+            }
+        } catch (e) {
+            console.error('Push subscription failed:', e);
+            showError('Could not enable alerts: ' + e.message + '. Please try refreshing the page.');
         }
     }
     </script>

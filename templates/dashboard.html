@@ -33,7 +33,7 @@
     <span>📱 <strong>Enable phone alerts on this device</strong> to receive notifications when conditions are good.</span>
     <div class="d-flex gap-2 ms-3">
         <button class="btn btn-sm btn-primary" onclick="enableNotificationsFromDashboard()">Enable on this device</button>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" onclick="dismissPushPrompt()"></button>
     </div>
 </div>
 <div id="push-blocked-prompt" style="display:none;" class="alert alert-warning alert-dismissible fade show">
