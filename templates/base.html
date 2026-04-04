@@ -54,9 +54,15 @@
     (function () {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
+        // If already blocked, show blocked state immediately without asking
+        if (Notification.permission === 'denied') {
+            updateNotifButton(null, true);
+            return;
+        }
+
         navigator.serviceWorker.register('/sw.js').then(async reg => {
             const sub = await reg.pushManager.getSubscription();
-            updateNotifButton(sub);
+            updateNotifButton(sub, false);
         }).catch(e => console.warn('SW registration failed:', e));
     })();
 
@@ -67,9 +73,13 @@
     }
 
     async function enableNotifications() {
+        if (Notification.permission === 'denied') {
+            showBlockedMessage();
+            return;
+        }
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            alert('Notification permission was denied.');
+            updateNotifButton(null, true);
             return;
         }
         const reg = await navigator.serviceWorker.ready;
@@ -84,7 +94,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON())
         });
-        updateNotifButton(sub);
+        updateNotifButton(sub, false);
     }
 
     async function disableNotifications() {
@@ -98,13 +108,31 @@
             });
             await sub.unsubscribe();
         }
-        updateNotifButton(null);
+        updateNotifButton(null, false);
     }
 
-    function updateNotifButton(sub) {
+    function showBlockedMessage() {
+        let msg = document.getElementById('notif-blocked-msg');
+        if (!msg) {
+            msg = document.createElement('div');
+            msg.id = 'notif-blocked-msg';
+            msg.className = 'alert alert-warning alert-dismissible fade show mt-3';
+            msg.innerHTML = `<strong>Notifications are blocked in your browser.</strong>
+                To enable them, click the padlock icon in the address bar,
+                change <em>Notifications</em> to <em>Allow</em>, then refresh the page.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.querySelector('.container.mt-4').prepend(msg);
+        }
+    }
+
+    function updateNotifButton(sub, blocked) {
         const btn = document.getElementById('notif-btn');
         if (!btn) return;
-        if (sub) {
+        if (blocked) {
+            btn.innerHTML = '<span style="text-decoration:line-through;color:#f88;">🔔</span> Alerts blocked';
+            btn.className = 'btn btn-outline-danger btn-sm me-2';
+            btn.onclick = showBlockedMessage;
+        } else if (sub) {
             btn.textContent = '🔔 Alerts on';
             btn.className = 'btn btn-success btn-sm me-2';
             btn.onclick = disableNotifications;
