@@ -24,7 +24,6 @@
                     <a href="{{ url_for('main.index') }}" class="btn btn-outline-light btn-sm me-2">My Spots</a>
                     <a href="{{ url_for('spots.index') }}" class="btn btn-outline-light btn-sm me-2">Find Spots</a>
                     <a href="/profile" class="btn btn-outline-light btn-sm me-2">Profile</a>
-                    <button id="notif-btn" class="btn btn-outline-light btn-sm me-2" onclick="enableNotifications()">🔔 Enable alerts</button>
                     {% if current_user.is_admin %}
                         <a href="{{ url_for('spots.manage') }}" class="btn btn-warning btn-sm me-2">Manage Spots</a>
                         <a href="{{ url_for('admin_bp.users') }}" class="btn btn-warning btn-sm me-2">Manage Users</a>
@@ -54,15 +53,14 @@
     (function () {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
-        // If already blocked, show blocked state immediately without asking
         if (Notification.permission === 'denied') {
-            updateNotifButton(null, true);
+            showDashboardPrompt('blocked');
             return;
         }
 
         navigator.serviceWorker.register('/sw.js').then(async reg => {
             const sub = await reg.pushManager.getSubscription();
-            updateNotifButton(sub, false);
+            if (!sub) showDashboardPrompt('unsubscribed');
         }).catch(e => console.warn('SW registration failed:', e));
     })();
 
@@ -72,14 +70,21 @@
         return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
     }
 
-    async function enableNotifications() {
+    function showDashboardPrompt(state) {
+        const normal  = document.getElementById('push-prompt');
+        const blocked = document.getElementById('push-blocked-prompt');
+        if (state === 'blocked' && blocked)  { blocked.style.display = ''; }
+        if (state === 'unsubscribed' && normal) { normal.style.display = ''; }
+    }
+
+    async function enableNotificationsFromDashboard() {
         if (Notification.permission === 'denied') {
-            showBlockedMessage();
+            showDashboardPrompt('blocked');
             return;
         }
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            updateNotifButton(null, true);
+            showDashboardPrompt('blocked');
             return;
         }
         const reg = await navigator.serviceWorker.ready;
@@ -94,53 +99,10 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON())
         });
-        updateNotifButton(sub, false);
-    }
-
-    async function disableNotifications() {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-            await fetch('/push/unsubscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ endpoint: sub.endpoint })
-            });
-            await sub.unsubscribe();
-        }
-        updateNotifButton(null, false);
-    }
-
-    function showBlockedMessage() {
-        let msg = document.getElementById('notif-blocked-msg');
-        if (!msg) {
-            msg = document.createElement('div');
-            msg.id = 'notif-blocked-msg';
-            msg.className = 'alert alert-warning alert-dismissible fade show mt-3';
-            msg.innerHTML = `<strong>Notifications are blocked in your browser.</strong>
-                To enable them, click the padlock icon in the address bar,
-                change <em>Notifications</em> to <em>Allow</em>, then refresh the page.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-            document.querySelector('.container.mt-4').prepend(msg);
-        }
-    }
-
-    function updateNotifButton(sub, blocked) {
-        const btn = document.getElementById('notif-btn');
-        if (!btn) return;
-        if (blocked) {
-            btn.innerHTML = '<span style="text-decoration:line-through;color:#f88;">🔔</span> Alerts blocked';
-            btn.className = 'btn btn-outline-danger btn-sm me-2';
-            btn.onclick = showBlockedMessage;
-        } else if (sub) {
-            btn.textContent = '🔔 Alerts on';
-            btn.className = 'btn btn-success btn-sm me-2';
-            btn.onclick = disableNotifications;
-        } else {
-            btn.textContent = '🔔 Enable alerts';
-            btn.className = 'btn btn-outline-light btn-sm me-2';
-            btn.onclick = enableNotifications;
-        }
+        // Hide the prompt — subscription successful
+        const prompt = document.getElementById('push-prompt');
+        if (prompt) prompt.style.display = 'none';
+        alert('✅ Alerts enabled on this device!');
     }
     </script>
 </body>

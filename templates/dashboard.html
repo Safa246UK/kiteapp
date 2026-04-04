@@ -28,6 +28,21 @@
 </div>
 {% endif %}
 
+{% if current_user.notification_type in ('push', 'both') %}
+<div id="push-prompt" style="display:none;" class="alert alert-info alert-dismissible fade show d-flex justify-content-between align-items-center">
+    <span>📱 <strong>Enable phone alerts on this device</strong> to receive notifications when conditions are good.</span>
+    <div class="d-flex gap-2 ms-3">
+        <button class="btn btn-sm btn-primary" onclick="enableNotificationsFromDashboard()">Enable on this device</button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+<div id="push-blocked-prompt" style="display:none;" class="alert alert-warning alert-dismissible fade show">
+    ⚠️ <strong>Notifications are blocked in your browser.</strong>
+    To enable them, click the padlock icon in the address bar, change <em>Notifications</em> to <em>Allow</em>, then refresh the page.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
 <p class="text-muted small mb-3">The RAG status of your spots reflects not only sufficient wind in the right direction and suitable tide conditions at the spot, but also that you are available according to the times you have set that you are available to kite. These can be changed on your <a href="{{ url_for('auth.profile') }}">Profile</a> screen.</p>
 
 {% if active_favs %}
