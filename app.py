@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask, send_from_directory
-from flask_login import LoginManager
+from flask import Flask, send_from_directory, render_template, make_response, redirect, url_for
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from models import db, User
 from extensions import bcrypt
@@ -87,6 +87,13 @@ app.register_blueprint(main)
 app.register_blueprint(spots)
 app.register_blueprint(admin_bp)
 app.register_blueprint(push_bp)
+
+# Welcome / splash page — shown automatically on first visit, also linked as Help
+@app.route('/welcome')
+def welcome():
+    resp = make_response(render_template('welcome.html'))
+    resp.set_cookie('seen_welcome', '1', max_age=60*60*24*365)  # remember for 1 year
+    return resp
 
 # Serve service worker from root so it has full scope
 @app.route('/sw.js')
