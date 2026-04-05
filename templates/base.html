@@ -55,6 +55,11 @@
 
     <!-- PWA: register service worker + push notifications -->
     <script>
+    // Register the service worker (fire and forget — ready handles the rest)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW register failed:', e));
+    }
+
     (function () {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
@@ -63,53 +68,45 @@
             return;
         }
 
-        // localStorage persists across sessions — if this device previously
-        // subscribed successfully, suppress the prompt immediately while the
-        // async SW check runs in the background.
-        const locallySubscribed = localStorage.getItem('push_subscribed') === '1';
-        if (locallySubscribed) {
-            // Still verify in the background and correct any mismatch
-            navigator.serviceWorker.ready.then(async reg => {
-                const sub = await reg.pushManager.getSubscription();
-                if (!sub) {
-                    // Subscription was lost (browser data cleared etc.) — reset
-                    localStorage.removeItem('push_subscribed');
-                    if (!sessionStorage.getItem('push-prompt-dismissed')) {
-                        showDashboardPrompt('unsubscribed');
-                    }
-                } else {
-                    // Re-sync to server silently
-                    try {
-                        await fetch('/push/subscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(sub.toJSON())
-                        });
-                    } catch (e) {}
-                }
-            }).catch(() => {});
-            return; // Prompt already hidden — nothing more to do on page load
-        }
-
-        // Don't re-show if the user dismissed the prompt this session
         if (sessionStorage.getItem('push-prompt-dismissed')) return;
 
-        navigator.serviceWorker.register('/sw.js').then(async reg => {
+        // If this device has previously subscribed, never show the prompt on
+        // this load. Run a background sync instead; if the subscription has
+        // genuinely been lost, clear the flag so the prompt shows next time.
+        if (localStorage.getItem('push_subscribed') === '1') {
+            navigator.serviceWorker.ready.then(async reg => {
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    // Still valid — re-sync to server silently
+                    fetch('/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sub.toJSON())
+                    }).catch(() => {});
+                } else {
+                    // Subscription genuinely gone — clear flag, show prompt next visit
+                    localStorage.removeItem('push_subscribed');
+                }
+            }).catch(() => {});
+            return;
+        }
+
+        // No flag — use serviceWorker.ready (active SW, not a newly installing one)
+        // to get a reliable answer from PushManager
+        navigator.serviceWorker.ready.then(async reg => {
             const sub = await reg.pushManager.getSubscription();
             if (!sub) {
                 showDashboardPrompt('unsubscribed');
             } else {
-                // Subscription found but localStorage flag missing — set it
+                // Found an existing subscription — set flag and sync to server
                 localStorage.setItem('push_subscribed', '1');
-                try {
-                    await fetch('/push/subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sub.toJSON())
-                    });
-                } catch (e) {}
+                fetch('/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub.toJSON())
+                }).catch(() => {});
             }
-        }).catch(e => console.warn('SW registration failed:', e));
+        }).catch(e => console.warn('SW ready failed:', e));
     })();
 
     function urlBase64ToUint8Array(b64) {
