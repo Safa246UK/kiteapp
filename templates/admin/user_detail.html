@@ -204,7 +204,7 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">First Name</label>
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
                             <input type="text" name="first_name" class="form-control"
                                    value="{{ user.first_name }}" required>
                         </div>
@@ -276,13 +276,15 @@
                             <span tabindex="0" data-bs-toggle="tooltip"
                                   title="WhatsApp notifications unavailable at present">
                                 <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp" disabled>
-                                <label class="btn btn-outline-success" for="notif_wa_modal" style="pointer-events:none;">💬 WhatsApp</label>
+                                <label class="btn btn-outline-secondary" for="notif_wa_modal"
+                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">💬 WhatsApp</label>
                             </span>
 
                             <span tabindex="0" data-bs-toggle="tooltip"
                                   title="WhatsApp notifications unavailable at present">
                                 <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both" disabled>
-                                <label class="btn btn-outline-info" for="notif_both_modal" style="pointer-events:none;">🔔💬 Both</label>
+                                <label class="btn btn-outline-secondary" for="notif_both_modal"
+                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">🔔💬 Both</label>
                             </span>
 
                             <input type="radio" class="btn-check" name="notification_type" id="notif_none_modal" value="none"
