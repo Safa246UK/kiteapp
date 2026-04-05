@@ -148,14 +148,24 @@
             });
             if (!saveResp.ok) throw new Error('Subscription could not be saved');
 
-            // Success — swap to green confirmation then fade out
+            // Success — swap to green confirmation then fade + collapse out
             if (prompt) {
                 prompt.className = 'alert alert-success d-flex align-items-center';
                 prompt.innerHTML = '✅ <strong class="ms-2">Alerts enabled on this device!</strong>';
                 setTimeout(() => {
-                    prompt.style.transition = 'opacity 0.8s';
-                    prompt.style.opacity = '0';
-                    setTimeout(() => { prompt.style.display = 'none'; }, 800);
+                    // Lock the current height so we can animate it to zero
+                    prompt.style.overflow   = 'hidden';
+                    prompt.style.maxHeight  = prompt.offsetHeight + 'px';
+                    prompt.style.transition = 'opacity 0.8s, max-height 0.8s ease, margin 0.8s, padding 0.8s';
+                    // Force reflow so transition fires
+                    prompt.offsetHeight;
+                    prompt.style.opacity       = '0';
+                    prompt.style.maxHeight     = '0';
+                    prompt.style.marginTop     = '0';
+                    prompt.style.marginBottom  = '0';
+                    prompt.style.paddingTop    = '0';
+                    prompt.style.paddingBottom = '0';
+                    setTimeout(() => { prompt.style.display = 'none'; }, 850);
                 }, 2000);
             }
         } catch (e) {
