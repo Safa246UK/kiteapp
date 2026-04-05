@@ -14,7 +14,7 @@ Helper:
 import os
 import json
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from flask_login import login_required, current_user
 from models import db, PushSubscription
 from pywebpush import webpush, WebPushException
@@ -66,7 +66,19 @@ def subscribe():
     sub.p256dh  = p256dh
     sub.auth    = auth
     db.session.commit()
-    return jsonify({'status': 'ok'})
+
+    # Set a long-lived server cookie so the dashboard knows this device is
+    # subscribed — avoids the JS race condition where Notification.permission
+    # returns 'default' on cold app start before Chrome re-connects to FCM.
+    resp = make_response(jsonify({'status': 'ok'}))
+    resp.set_cookie(
+        'wc_push', '1',
+        max_age=365 * 24 * 60 * 60,   # 1 year
+        samesite='Lax',
+        secure=True,
+        httponly=False,                 # JS doesn't need it; server reads it
+    )
+    return resp
 
 
 @push_bp.route('/push/unsubscribe', methods=['POST'])

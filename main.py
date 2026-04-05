@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 from flask_login import login_required, current_user
 from models import db, UserFavouriteSpot, Spot, AdminSettings
 from weather import get_day_summaries_for_user
@@ -28,6 +28,10 @@ def index():
 
     spot_summaries = {f.spot_id: get_day_summaries_for_user(f.spot_id, current_user) for f in user_favs}
 
+    # Server-set cookie written by /push/subscribe — tells us this device has
+    # already granted push permission so we don't need to show the prompt again.
+    push_subscribed_device = request.cookies.get('wc_push') == '1'
+
     return render_template('dashboard.html',
                            active_favs=active_favs,
                            other_favs=other_favs,
@@ -37,4 +41,5 @@ def index():
                            max_active=max_active,
                            at_max_favs=not current_user.is_admin and fav_count >= max_favs,
                            at_max_active=active_count >= max_active,
-                           spot_summaries=spot_summaries)
+                           spot_summaries=spot_summaries,
+                           push_subscribed_device=push_subscribed_device)
