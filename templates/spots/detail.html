@@ -59,9 +59,20 @@
                 thead .forecast-label {
                     z-index: 3;
                 }
+                /* Each hour column */
+                .forecast-col { min-width: 55px; }
+
+                /* Mobile: tighter layout so more columns fit on screen */
+                @media (max-width: 767px) {
+                    .forecast-table { font-size: 0.72rem; }
+                    .forecast-table td,
+                    .forecast-table th { padding: 3px 2px !important; }
+                    .forecast-label  { min-width: 95px !important; }
+                    .forecast-col    { min-width: 36px; }
+                }
                 </style>
                 <div class="table-responsive">
-                    <table class="table table-bordered table-sm mb-0 text-center" style="min-width:200px;">
+                    <table class="table table-bordered table-sm mb-0 text-center forecast-table" style="min-width:200px;">
                         <thead>
                             <!-- Row 1: Day labels spanning their columns -->
                             <tr>
@@ -77,9 +88,9 @@
                             <tr>
                                 {% for day in forecast_slots %}
                                     {% for slot in day.slots %}
-                                    <th style="background:{{ slot.header_colour }};
-                                               color:{% if slot.header_colour == '#4CAF50' %}white{% else %}#555{% endif %};
-                                               min-width:55px;">
+                                    <th class="forecast-col"
+                                        style="background:{{ slot.header_colour }};
+                                               color:{% if slot.header_colour == '#4CAF50' %}white{% else %}#555{% endif %};">
                                         {{ slot.time }}
                                     </th>
                                     {% endfor %}

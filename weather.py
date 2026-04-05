@@ -347,7 +347,7 @@ def get_forecast_table(spot, user=None):
             else:                gust_colour_raw = '#ffcccc'
 
         slot = {
-            'time':              dt.strftime('%H:%M'),
+            'time':              dt.strftime('%Hh'),
             'wind_speed':        spd,
             'wind_gust':         gust,
             'wind_dir':          compass,
