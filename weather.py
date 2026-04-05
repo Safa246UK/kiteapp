@@ -396,7 +396,7 @@ def get_forecast_table(spot, user=None):
 
         for date_key, day in days.items():
             for slot in day['slots']:
-                hour = int(slot['time'].split(':')[0])
+                hour = int(slot['time'].rstrip('h').split(':')[0])
                 td   = tide_data.get(date_key, {}).get(hour)
                 if td:
                     slot['tide_height'] = td['height']

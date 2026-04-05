@@ -300,23 +300,43 @@ def _events_to_slots(events, spot, target_dates, hat=None, lat=None):
     return result
 
 
+TIDE_CACHE_HOURS = 12   # how long cached tidal events stay fresh
+
+
 def get_tide_slots(spot, target_dates):
     """
-    Always calls the API live for fresh data.
-    If the API is unavailable, falls back to the last successfully received data.
-    Returns empty dict if neither is available.
+    Return tide slots for the given dates.
+
+    Uses cached DB data when it is fresh (< TIDE_CACHE_HOURS old).
+    Only calls the Admiralty API when the cache is missing or stale,
+    then saves the result so subsequent page loads are served from cache.
+    Falls back to stale cached data if the API is unavailable.
     """
     import os
+    from datetime import timedelta
+
     api_key = os.environ.get('ADMIRALTY_API_KEY', '')
     cache   = TideCache.query.filter_by(spot_id=spot.id).first()
 
     hat = cache.station_hat if cache else None
     lat = cache.station_lat if cache else None
 
-    if not api_key:
-        print(f"[Tides] No API key set.")
+    # ── Serve from cache if it's still fresh ──────────────────────────────
+    cache_fresh = (
+        cache and cache.events_json and cache.fetched_at and
+        cache.fetched_at >= datetime.utcnow() - timedelta(hours=TIDE_CACHE_HOURS)
+    )
+    if cache_fresh:
+        print(f"[Tides] Serving {spot.name} from cache (age < {TIDE_CACHE_HOURS}h)")
         return _events_to_slots(_parse_events(cache.events_json), spot, target_dates,
-                                hat=hat, lat=lat) if (cache and cache.events_json) else {}
+                                hat=hat, lat=lat)
+
+    # ── No fresh cache — try the live API ─────────────────────────────────
+    if not api_key:
+        print(f"[Tides] No API key — using stale/empty cache for {spot.name}")
+        return (_events_to_slots(_parse_events(cache.events_json), spot, target_dates,
+                                 hat=hat, lat=lat)
+                if (cache and cache.events_json) else {})
 
     try:
         station_id, _ = _get_station_id(spot, api_key)
@@ -328,31 +348,29 @@ def get_tide_slots(spot, target_dates):
         hat   = cache.station_hat if cache else None
         lat   = cache.station_lat if cache else None
 
-        # Always fetch live tidal events
         resp = requests.get(
             f"{ADMIRALTY_BASE}/stations/{station_id}/tidalevents",
             headers=_headers(api_key),
             params={'duration': 7},
-            timeout=10
+            timeout=15
         )
         resp.raise_for_status()
         raw_events = resp.json()
 
-        # Save as fallback for when API is unavailable
         if cache:
             cache.fetched_at  = datetime.utcnow()
             cache.events_json = json.dumps(raw_events)
             db.session.commit()
 
-        events = _parse_events(json.dumps(raw_events))
-        print(f"[Tides] Live data fetched for {spot.name}")
-        return _events_to_slots(events, spot, target_dates, hat=hat, lat=lat)
+        print(f"[Tides] Live data fetched and cached for {spot.name}")
+        return _events_to_slots(_parse_events(json.dumps(raw_events)), spot,
+                                target_dates, hat=hat, lat=lat)
 
     except Exception as e:
-        print(f"[Tides] API unavailable for {spot.name}: {e}")
+        print(f"[Tides] API error for {spot.name}: {e}")
         if cache and cache.events_json:
-            print(f"[Tides] Using last received data for {spot.name}")
+            print(f"[Tides] Falling back to stale cache for {spot.name}")
             return _events_to_slots(_parse_events(cache.events_json), spot, target_dates,
                                     hat=hat, lat=lat)
-        print(f"[Tides] No fallback data available for {spot.name}")
+        print(f"[Tides] No cached data available for {spot.name}")
         return {}
