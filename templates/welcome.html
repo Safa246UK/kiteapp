@@ -1,77 +1,66 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to WindChaser</title>
-    <link rel="icon" type="image/png" href="/static/icon-192.png">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0d6efd">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; }
+{% extends 'base.html' %}
 
-        .hero {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: white;
-            padding: 3rem 1rem 2.5rem;
-            text-align: center;
-        }
-        .hero img {
-            width: 96px;
-            height: 96px;
-            margin-bottom: 1rem;
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-        }
-        .hero h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 0.4rem; }
-        .hero p  { font-size: 1.15rem; opacity: 0.9; margin-bottom: 0; }
+{% block full_width %}
+<style>
+    .hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 3rem 1rem 2.5rem;
+        text-align: center;
+    }
+    .hero img {
+        width: 96px;
+        height: 96px;
+        margin-bottom: 1rem;
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    }
+    .hero h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .hero p  { font-size: 1.15rem; opacity: 0.9; margin-bottom: 0; }
 
-        .section { padding: 2rem 0 1rem; }
-        .section h2 { font-size: 1.4rem; font-weight: 700; color: #0d6efd; margin-bottom: 1rem; }
+    .section { padding: 2rem 0 1rem; }
+    .section h2 { font-size: 1.4rem; font-weight: 700; color: #0d6efd; margin-bottom: 1rem; }
 
-        .feature-card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            padding: 1.25rem 1.5rem;
-            height: 100%;
-        }
-        .feature-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-        .feature-card h5 { font-weight: 700; margin-bottom: 0.4rem; }
-        .feature-card p  { color: #555; font-size: 0.92rem; margin-bottom: 0; }
+    .feature-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 1.25rem 1.5rem;
+        height: 100%;
+    }
+    .feature-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .feature-card h5 { font-weight: 700; margin-bottom: 0.4rem; }
+    .feature-card p  { color: #555; font-size: 0.92rem; margin-bottom: 0; }
 
-        .step-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: #0d6efd;
-            color: white;
-            font-weight: 700;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-        .step-row { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.9rem; }
-        .step-row p { margin: 0; font-size: 0.93rem; color: #444; padding-top: 4px; }
+    .step-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+    .step-row { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.9rem; }
+    .step-row p { margin: 0; font-size: 0.93rem; color: #444; padding-top: 4px; }
 
-        .platform-card {
-            border-radius: 12px;
-            border: 2px solid #dee2e6;
-            padding: 1.25rem;
-            height: 100%;
-        }
-        .platform-card h5 { font-weight: 700; margin-bottom: 1rem; }
+    .platform-card {
+        border-radius: 12px;
+        border: 2px solid #dee2e6;
+        padding: 1.25rem;
+        height: 100%;
+    }
+    .platform-card h5 { font-weight: 700; margin-bottom: 1rem; }
 
-        .cta-bar {
-            background: #fff;
-            border-top: 1px solid #dee2e6;
-            padding: 1.5rem 1rem;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
+    .cta-bar {
+        background: #fff;
+        border-top: 1px solid #dee2e6;
+        padding: 1.5rem 1rem;
+        text-align: center;
+    }
+</style>
 
 <!-- Hero -->
 <div class="hero">
@@ -79,8 +68,10 @@
     <h1>WindChaser</h1>
     <p>Know when the wind is right. Never miss a session.</p>
 </div>
+{% endblock %}
 
-<div class="container" style="max-width: 780px;">
+{% block content %}
+<div style="max-width: 780px; margin: 0 auto;">
 
     <!-- What is it? -->
     <div class="section">
@@ -199,7 +190,9 @@
 
     <div class="mb-4"></div>
 </div>
+{% endblock %}
 
+{% block post_content %}
 <!-- Sticky CTA bar -->
 <div class="cta-bar">
     <div class="d-flex flex-wrap justify-content-center gap-2">
@@ -218,7 +211,4 @@
     </div>
     <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;">No app store needed · No spam</p>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
