@@ -268,40 +268,42 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Alert method</label>
-                        <div class="btn-group d-flex" role="group">
+                        <div class="d-flex gap-2 flex-wrap">
                             <input type="radio" class="btn-check" name="notification_type" id="notif_push_modal" value="push"
                                    {% if (user.notification_type or 'push') == 'push' %}checked{% endif %}>
                             <label class="btn btn-outline-primary" for="notif_push_modal">🔔 Phone App</label>
 
-                            <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp"
-                                   {% if user.notification_type == 'whatsapp' %}checked{% endif %}>
-                            <label class="btn btn-outline-success" for="notif_wa_modal">💬 WhatsApp</label>
+                            <span tabindex="0" data-bs-toggle="tooltip"
+                                  title="WhatsApp notifications unavailable at present">
+                                <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp" disabled>
+                                <label class="btn btn-outline-success" for="notif_wa_modal" style="pointer-events:none;">💬 WhatsApp</label>
+                            </span>
 
-                            <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both"
-                                   {% if user.notification_type == 'both' %}checked{% endif %}>
-                            <label class="btn btn-outline-info" for="notif_both_modal">🔔💬 Both</label>
+                            <span tabindex="0" data-bs-toggle="tooltip"
+                                  title="WhatsApp notifications unavailable at present">
+                                <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both" disabled>
+                                <label class="btn btn-outline-info" for="notif_both_modal" style="pointer-events:none;">🔔💬 Both</label>
+                            </span>
 
                             <input type="radio" class="btn-check" name="notification_type" id="notif_none_modal" value="none"
                                    {% if user.notification_type == 'none' %}checked{% endif %}>
                             <label class="btn btn-outline-secondary" for="notif_none_modal">🔕 None</label>
                         </div>
                     </div>
-                    <div class="mb-3 ms-1 d-flex gap-3">
-                        <label class="form-label w-100 mb-1">Alert me for:</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_today"
-                                   id="wa_today_modal" {% if user.whatsapp_today %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_today_modal">Today</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_tomorrow"
-                                   id="wa_tomorrow_modal" {% if user.whatsapp_tomorrow %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_tomorrow_modal">Tomorrow</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_day_after"
-                                   id="wa_dayafter_modal" {% if user.whatsapp_day_after %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_dayafter_modal">Day after</label>
+                    <div class="mb-3">
+                        <label class="form-label mb-2">Alert me for:</label>
+                        <div class="d-flex gap-2">
+                            <input type="checkbox" class="btn-check" name="whatsapp_today" id="day_today_modal"
+                                   {% if user.whatsapp_today %}checked{% endif %}>
+                            <label class="btn btn-outline-primary btn-sm" for="day_today_modal">Today</label>
+
+                            <input type="checkbox" class="btn-check" name="whatsapp_tomorrow" id="day_tomorrow_modal"
+                                   {% if user.whatsapp_tomorrow %}checked{% endif %}>
+                            <label class="btn btn-outline-primary btn-sm" for="day_tomorrow_modal">Tomorrow</label>
+
+                            <input type="checkbox" class="btn-check" name="whatsapp_day_after" id="day_dayafter_modal"
+                                   {% if user.whatsapp_day_after %}checked{% endif %}>
+                            <label class="btn btn-outline-primary btn-sm" for="day_dayafter_modal">Day after</label>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -368,4 +370,11 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
 {% endblock %}
