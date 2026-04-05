@@ -63,28 +63,51 @@
             return;
         }
 
+        // localStorage persists across sessions — if this device previously
+        // subscribed successfully, suppress the prompt immediately while the
+        // async SW check runs in the background.
+        const locallySubscribed = localStorage.getItem('push_subscribed') === '1';
+        if (locallySubscribed) {
+            // Still verify in the background and correct any mismatch
+            navigator.serviceWorker.ready.then(async reg => {
+                const sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    // Subscription was lost (browser data cleared etc.) — reset
+                    localStorage.removeItem('push_subscribed');
+                    if (!sessionStorage.getItem('push-prompt-dismissed')) {
+                        showDashboardPrompt('unsubscribed');
+                    }
+                } else {
+                    // Re-sync to server silently
+                    try {
+                        await fetch('/push/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(sub.toJSON())
+                        });
+                    } catch (e) {}
+                }
+            }).catch(() => {});
+            return; // Prompt already hidden — nothing more to do on page load
+        }
+
         // Don't re-show if the user dismissed the prompt this session
         if (sessionStorage.getItem('push-prompt-dismissed')) return;
 
         navigator.serviceWorker.register('/sw.js').then(async reg => {
             const sub = await reg.pushManager.getSubscription();
             if (!sub) {
-                // No subscription in this browser — show the prompt
                 showDashboardPrompt('unsubscribed');
             } else {
-                // Subscription exists — silently sync it to the server in case
-                // it was lost (e.g. after a server reset or failed POST).
-                // The server endpoint is idempotent so this is always safe.
+                // Subscription found but localStorage flag missing — set it
+                localStorage.setItem('push_subscribed', '1');
                 try {
                     await fetch('/push/subscribe', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(sub.toJSON())
                     });
-                } catch (e) {
-                    // Non-critical — subscription already exists in browser
-                }
-                // Prompt stays hidden — this device is subscribed
+                } catch (e) {}
             }
         }).catch(e => console.warn('SW registration failed:', e));
     })();
@@ -102,7 +125,7 @@
         if (state === 'unsubscribed' && normal) { normal.style.display = ''; }
     }
 
-    // Called by the X button — remember dismissal so prompt doesn't reappear on refresh
+    // Called by the X button — remember dismissal for this session only
     function dismissPushPrompt() {
         sessionStorage.setItem('push-prompt-dismissed', '1');
         const prompt = document.getElementById('push-prompt');
@@ -147,6 +170,9 @@
                 body: JSON.stringify(sub.toJSON())
             });
             if (!saveResp.ok) throw new Error('Subscription could not be saved');
+
+            // Remember this device is subscribed across sessions
+            localStorage.setItem('push_subscribed', '1');
 
             // Success — swap to green confirmation then fade + collapse out
             if (prompt) {
