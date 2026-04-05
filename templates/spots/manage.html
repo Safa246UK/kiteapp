@@ -11,8 +11,7 @@
         <thead class="table-dark">
             <tr>
                 <th>Name</th>
-                <th>Location</th>
-                <th>Watchers</th>
+                <th class="text-center">Watchers</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -25,8 +24,7 @@
                         {{ spot.name }}
                     </a>
                 </td>
-                <td><small>{{ spot.latitude|round(4) }}, {{ spot.longitude|round(4) }}</small></td>
-                <td>{{ watcher_counts[spot.id] }}</td>
+                <td class="text-center">{{ watcher_counts[spot.id] }}</td>
                 <td>
                     {% if spot.is_retired %}
                         <span class="badge bg-secondary">Disabled</span>
@@ -35,19 +33,21 @@
                     {% endif %}
                 </td>
                 <td>
-                    <a href="{{ url_for('spots.edit', spot_id=spot.id) }}"
-                       class="btn btn-sm btn-warning me-1">✏️ Edit</a>
-                    <form method="POST" action="{{ url_for('spots.retire', spot_id=spot.id) }}" class="d-inline">
-                        <button class="btn btn-sm {% if spot.is_retired %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
-                                onclick="return confirm('{% if spot.is_retired %}Enable this spot?{% else %}Disable this spot? It will be hidden from all users.{% endif %}')">
-                            {% if spot.is_retired %}✅ Enable{% else %}🚫 Disable{% endif %}
-                        </button>
-                    </form>
+                    <div class="d-flex gap-1">
+                        <a href="{{ url_for('spots.edit', spot_id=spot.id) }}"
+                           class="btn btn-sm btn-warning">✏️ Edit</a>
+                        <form method="POST" action="{{ url_for('spots.retire', spot_id=spot.id) }}">
+                            <button class="btn btn-sm {% if spot.is_retired %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+                                    onclick="return confirm('{% if spot.is_retired %}Enable this spot?{% else %}Disable this spot? It will be hidden from all users.{% endif %}')">
+                                {% if spot.is_retired %}✅ Enable{% else %}🚫 Disable{% endif %}
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" class="text-center text-muted">No spots yet.</td>
+                <td colspan="4" class="text-center text-muted">No spots yet.</td>
             </tr>
             {% endfor %}
         </tbody>
