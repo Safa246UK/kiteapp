@@ -68,7 +68,24 @@
 
         navigator.serviceWorker.register('/sw.js').then(async reg => {
             const sub = await reg.pushManager.getSubscription();
-            if (!sub) showDashboardPrompt('unsubscribed');
+            if (!sub) {
+                // No subscription in this browser — show the prompt
+                showDashboardPrompt('unsubscribed');
+            } else {
+                // Subscription exists — silently sync it to the server in case
+                // it was lost (e.g. after a server reset or failed POST).
+                // The server endpoint is idempotent so this is always safe.
+                try {
+                    await fetch('/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sub.toJSON())
+                    });
+                } catch (e) {
+                    // Non-critical — subscription already exists in browser
+                }
+                // Prompt stays hidden — this device is subscribed
+            }
         }).catch(e => console.warn('SW registration failed:', e));
     })();
 
