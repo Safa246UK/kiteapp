@@ -95,6 +95,15 @@
                     {% else %}
                         <span class="badge bg-secondary">User</span>
                     {% endif %}
+                    {% if user.email.lower() != 'ken@hamptons.me.uk' and user.id != current_user.id %}
+                    <br>
+                    <button class="btn btn-link btn-sm p-0 mt-1 text-muted"
+                            onclick="openRoleModal({{ user.id }}, '{{ user.name|e }}', {{ 'true' if user.is_admin else 'false' }})">
+                        <small>change</small>
+                    </button>
+                    {% elif user.email.lower() == 'ken@hamptons.me.uk' %}
+                    <br><small class="text-muted" title="Protected account">🔒</small>
+                    {% endif %}
                 </td>
                 <td>
                     {% if user.is_active %}
@@ -146,12 +155,49 @@
     </div>
 </div>
 
+<!-- Change Role Modal -->
+<div class="modal fade" id="roleModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🔑 Change Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="roleForm">
+                <div class="modal-body">
+                    <p id="roleDescription" class="mb-3"></p>
+                    <div class="mb-3">
+                        <label class="form-label">Your password <span class="text-danger">*</span></label>
+                        <input type="password" name="admin_password" class="form-control"
+                               placeholder="Confirm your password" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning" id="roleSubmitBtn">Change Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function openWaModal(userId, name, number) {
     document.getElementById('waRecipient').textContent = name + ' (' + number + ')';
     document.getElementById('waForm').action = '/admin/users/' + userId + '/send-whatsapp';
     document.getElementById('waForm').querySelector('textarea').value = '';
     new bootstrap.Modal(document.getElementById('waModal')).show();
+}
+
+function openRoleModal(userId, name, isAdmin) {
+    const from = isAdmin ? 'Admin' : 'User';
+    const to   = isAdmin ? 'User'  : 'Admin';
+    document.getElementById('roleDescription').innerHTML =
+        'Change <strong>' + name + '</strong> from <strong>' + from + '</strong> → <strong>' + to + '</strong>?<br>' +
+        '<small class="text-muted">Enter your own password to confirm.</small>';
+    document.getElementById('roleForm').action = '/admin/users/' + userId + '/toggle-role';
+    document.getElementById('roleForm').querySelector('input[type=password]').value = '';
+    new bootstrap.Modal(document.getElementById('roleModal')).show();
 }
 </script>
 {% endblock %}

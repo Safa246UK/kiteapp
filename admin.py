@@ -5,6 +5,9 @@ from extensions import bcrypt
 
 admin_bp = Blueprint('admin_bp', __name__)
 
+# This account is permanently admin and cannot be demoted under any circumstances
+PROTECTED_ADMIN_EMAIL = 'ken@hamptons.me.uk'
+
 
 def admin_required(f):
     from functools import wraps
@@ -134,6 +137,32 @@ def send_all_alerts():
         for u, d in failed_list:
             flash(f'❌ {u.email}: {d}', 'danger')
     flash('Alerts: ' + ', '.join(parts) if parts else 'No users with alerts enabled.', 'info')
+    return redirect(url_for('admin_bp.users'))
+
+
+@admin_bp.route('/admin/users/<int:user_id>/toggle-role', methods=['POST'])
+@login_required
+@admin_required
+def toggle_role(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.email.lower() == PROTECTED_ADMIN_EMAIL:
+        flash(f'{user.email} is a protected account — its admin status cannot be changed.', 'danger')
+        return redirect(url_for('admin_bp.users'))
+
+    if user.id == current_user.id:
+        flash('You cannot change your own role.', 'danger')
+        return redirect(url_for('admin_bp.users'))
+
+    password = request.form.get('admin_password', '')
+    if not bcrypt.check_password_hash(current_user.password, password):
+        flash('Incorrect password — role not changed.', 'danger')
+        return redirect(url_for('admin_bp.users'))
+
+    user.is_admin = not user.is_admin
+    db.session.commit()
+    new_role = 'Admin' if user.is_admin else 'User'
+    flash(f'{user.name} is now a {new_role}.', 'success')
     return redirect(url_for('admin_bp.users'))
 
 
