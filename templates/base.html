@@ -70,35 +70,38 @@
 
         if (sessionStorage.getItem('push-prompt-dismissed')) return;
 
-        // If this device has previously subscribed, never show the prompt on
-        // this load. Run a background sync instead; if the subscription has
-        // genuinely been lost, clear the flag so the prompt shows next time.
-        if (localStorage.getItem('push_subscribed') === '1') {
+        // TWO reliable signals that this device is subscribed:
+        //   1. Notification.permission === 'granted'  (OS-level, survives app close)
+        //   2. localStorage.push_subscribed === '1'   (set when we saved the subscription)
+        // If BOTH are true, hide the prompt unconditionally and just do a quiet
+        // background sync. We do NOT call getSubscription() here — it can return
+        // null on a cold start before the push service reconnects, causing false
+        // negatives. Only if getSubscription() returns null do we clear the flag
+        // so the prompt reappears on the NEXT open.
+        if (Notification.permission === 'granted' && localStorage.getItem('push_subscribed') === '1') {
             navigator.serviceWorker.ready.then(async reg => {
                 const sub = await reg.pushManager.getSubscription();
                 if (sub) {
-                    // Still valid — re-sync to server silently
                     fetch('/push/subscribe', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(sub.toJSON())
                     }).catch(() => {});
                 } else {
-                    // Subscription genuinely gone — clear flag, show prompt next visit
+                    // Subscription genuinely gone — clear flag so prompt shows next open
                     localStorage.removeItem('push_subscribed');
                 }
             }).catch(() => {});
-            return;
+            return;  // Prompt stays hidden on THIS load regardless
         }
 
-        // No flag — use serviceWorker.ready (active SW, not a newly installing one)
-        // to get a reliable answer from PushManager
+        // Permission not granted yet, or no flag — check properly
         navigator.serviceWorker.ready.then(async reg => {
             const sub = await reg.pushManager.getSubscription();
             if (!sub) {
                 showDashboardPrompt('unsubscribed');
             } else {
-                // Found an existing subscription — set flag and sync to server
+                // Found a subscription without a flag — set it and sync
                 localStorage.setItem('push_subscribed', '1');
                 fetch('/push/subscribe', {
                     method: 'POST',
