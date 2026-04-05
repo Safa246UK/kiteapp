@@ -70,46 +70,34 @@
 
         if (sessionStorage.getItem('push-prompt-dismissed')) return;
 
-        // TWO reliable signals that this device is subscribed:
-        //   1. Notification.permission === 'granted'  (OS-level, survives app close)
-        //   2. localStorage.push_subscribed === '1'   (set when we saved the subscription)
-        // If BOTH are true, hide the prompt unconditionally and just do a quiet
-        // background sync. We do NOT call getSubscription() here — it can return
-        // null on a cold start before the push service reconnects, causing false
-        // negatives. Only if getSubscription() returns null do we clear the flag
-        // so the prompt reappears on the NEXT open.
-        if (Notification.permission === 'granted' && localStorage.getItem('push_subscribed') === '1') {
+        if (Notification.permission === 'granted') {
+            // Permission is an OS-level setting that survives app close — if it's
+            // granted we know the user has been through the enable flow on this device.
+            // Hide the prompt and silently sync the subscription to the server.
+            // If the subscription has been lost, re-create it quietly without
+            // bothering the user.
             navigator.serviceWorker.ready.then(async reg => {
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) {
-                    fetch('/push/subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sub.toJSON())
-                    }).catch(() => {});
-                } else {
-                    // Subscription genuinely gone — clear flag so prompt shows next open
-                    localStorage.removeItem('push_subscribed');
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    // Re-subscribe silently using the current VAPID key
+                    const resp = await fetch('/push/vapid-public-key');
+                    const { publicKey } = await resp.json();
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicKey)
+                    });
                 }
-            }).catch(() => {});
-            return;  // Prompt stays hidden on THIS load regardless
-        }
-
-        // Permission not granted yet, or no flag — check properly
-        navigator.serviceWorker.ready.then(async reg => {
-            const sub = await reg.pushManager.getSubscription();
-            if (!sub) {
-                showDashboardPrompt('unsubscribed');
-            } else {
-                // Found a subscription without a flag — set it and sync
-                localStorage.setItem('push_subscribed', '1');
                 fetch('/push/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(sub.toJSON())
                 }).catch(() => {});
-            }
-        }).catch(e => console.warn('SW ready failed:', e));
+            }).catch(() => {});
+            return;  // Prompt always hidden when permission is granted
+        }
+
+        // Permission is 'default' — user hasn't been asked yet — show the prompt
+        showDashboardPrompt('unsubscribed');
     })();
 
     function urlBase64ToUint8Array(b64) {

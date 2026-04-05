@@ -39,7 +39,7 @@ def login():
             if not user.is_active:
                 flash('Your account has been disabled. Please contact the admin.', 'danger')
                 return redirect(url_for('auth.login'))
-            login_user(user)
+            login_user(user, remember=True)
             return redirect(url_for('main.index'))
         flash('Invalid email or password.', 'danger')
     return render_template('auth/login.html')
