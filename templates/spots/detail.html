@@ -98,6 +98,17 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- Available (user's "Times I can kite") -->
+                            {% if current_user.available_slots %}
+                            <tr>
+                                <td class="text-start ps-2 text-muted small forecast-label">📅 Available</td>
+                                {% for day in forecast_slots %}{% for slot in day.slots %}
+                                <td style="background:{% if slot.available %}#c8f7c5{% else %}#ffdddd{% endif %};">
+                                    {% if slot.available %}✓{% else %}✗{% endif %}
+                                </td>
+                                {% endfor %}{% endfor %}
+                            </tr>
+                            {% endif %}
                             <!-- Wind speed -->
                             <tr>
                                 <td class="text-start ps-2 text-muted small forecast-label">💨 Wind (kn)</td>
@@ -166,43 +177,52 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- Legend -->
-                <div class="d-flex flex-wrap gap-2 px-2 pt-2 pb-1">
-                    <small class="text-muted me-1">Time:</small>
-                    <span class="badge" style="background:#4CAF50; color:white; border:1px solid #ccc;">All conditions good</span>
-                    <span class="badge" style="background:#f0f0f0; color:#555; border:1px solid #ccc;">Not suitable</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
-                    <small class="text-muted me-1">Wind speed:</small>
-                    <span class="badge" style="background:#e3f2fd; color:#333; border:1px solid #ccc;">Too light</span>
-                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">In range</span>
-                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too strong</span>
-                </div>
-                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
-                    <small class="text-muted me-1">Direction:</small>
-                    {% for label, colour in rating_colours.items() %}
-                    {% if label != 'out_of_range' %}
-                    <span class="badge" style="background:{{ colour }}; color:#333; border:1px solid #ccc;">
-                        {{ label.replace('_', ' ').title() }}
-                    </span>
+                <!-- Legend — collapsible, open by default on desktop -->
+                <details id="forecast-legend" class="px-2 pt-1 pb-2">
+                    <summary class="text-muted small mb-1" style="cursor:pointer; list-style:none; user-select:none;">
+                        📋 Colour key <small class="text-muted">(tap to expand)</small>
+                    </summary>
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        <small class="text-muted me-1">Hour bar:</small>
+                        <span class="badge" style="background:#4CAF50; color:white; border:1px solid #ccc;">All good</span>
+                        <span class="badge" style="background:#f0f0f0; color:#555; border:1px solid #ccc;">Not suitable</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        <small class="text-muted me-1">Wind:</small>
+                        <span class="badge" style="background:#e3f2fd; color:#333; border:1px solid #ccc;">Too light</span>
+                        <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">In range</span>
+                        <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too strong</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        <small class="text-muted me-1">Direction:</small>
+                        {% for label, colour in rating_colours.items() %}
+                        {% if label != 'out_of_range' %}
+                        <span class="badge" style="background:{{ colour }}; color:#333; border:1px solid #ccc;">
+                            {{ label.replace('_', ' ').title() }}
+                        </span>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        <small class="text-muted me-1">Gusts:</small>
+                        <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">≤30%</span>
+                        <span class="badge" style="background:#ffe0b2; color:#333; border:1px solid #ccc;">31–50%</span>
+                        <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">&gt;50%</span>
+                    </div>
+                    {% if has_tide %}
+                    <div class="d-flex flex-wrap gap-1">
+                        <small class="text-muted me-1">Tide:</small>
+                        <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too low</span>
+                        <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">Usable</span>
+                        <span class="badge" style="background:#c5e1f7; color:#333; border:1px solid #ccc;">Too high</span>
+                    </div>
                     {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="d-flex flex-wrap gap-2 px-2 pb-1">
-                    <small class="text-muted me-1">Gusts:</small>
-                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">≤30% above avg</span>
-                    <span class="badge" style="background:#ffe0b2; color:#333; border:1px solid #ccc;">31–50% above avg</span>
-                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">&gt;50% above avg</span>
-                </div>
-                <!-- Tide legend -->
-                {% if has_tide %}
-                <div class="d-flex flex-wrap gap-2 px-2 pb-2 pt-1">
-                    <small class="text-muted me-1">Tide:</small>
-                    <span class="badge" style="background:#ffcccc; color:#333; border:1px solid #ccc;">Too low — rocks exposed</span>
-                    <span class="badge" style="background:#c8f7c5; color:#333; border:1px solid #ccc;">Usable</span>
-                    <span class="badge" style="background:#c5e1f7; color:#333; border:1px solid #ccc;">Too high — no beach</span>
-                </div>
-                {% endif %}
+                </details>
+                <script>
+                    if (window.innerWidth >= 768) {
+                        document.getElementById('forecast-legend').open = true;
+                    }
+                </script>
                 {% else %}
                 <div class="p-3 text-muted">
                     Weather data is being fetched — check back in a moment.

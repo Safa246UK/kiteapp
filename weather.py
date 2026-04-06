@@ -22,7 +22,6 @@ COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
 RATING_COLOURS = {
     'perfect':     '#c8f7c5',
     'good':        '#c5e1f7',
-    'okay':        '#fff9c5',
     'poor':        '#ffe0b2',
     'dangerous':   '#e0e0e0',
     'out_of_range':'#f5f5f5',
@@ -47,8 +46,8 @@ def _direction_rating(spot, wind_dir_compass):
 
     if wind_dir_compass in dirs('perfect_directions'):   return 'perfect'
     if wind_dir_compass in dirs('good_directions'):      return 'good'
-    if wind_dir_compass in dirs('okay_directions'):      return 'okay'
     if wind_dir_compass in dirs('poor_directions'):      return 'poor'
+    # okay_directions are treated as dangerous (legacy field, no longer used)
     return 'dangerous'
 
 
@@ -324,9 +323,9 @@ def get_forecast_table(spot, user=None):
 
         dir_rating       = _direction_rating(spot, compass)
         wind_in_range    = eff_min_wind <= spd <= eff_max_wind
-        direction_usable = dir_rating in ('perfect', 'good', 'okay')
+        direction_usable = dir_rating in ('perfect', 'good')
 
-        # Wind: always coloured
+        # Wind speed: always coloured
         if spd < eff_min_wind:
             wind_speed_colour = '#e3f2fd'
         elif spd > eff_max_wind:
@@ -334,8 +333,19 @@ def get_forecast_table(spot, user=None):
         else:
             wind_speed_colour = '#c8f7c5'
 
-        # Direction: only coloured when wind is in range and direction is usable
-        wind_dir_colour = RATING_COLOURS[dir_rating] if (wind_in_range and direction_usable) else '#f5f5f5'
+        # Direction: always coloured by its own rating
+        wind_dir_colour = RATING_COLOURS.get(dir_rating, '#f5f5f5')
+
+        # Availability: is this hour in the user's "Times I can kite" slots?
+        available = False
+        if user and user.available_slots:
+            day_of_week  = dt.weekday()        # 0=Mon, 6=Sun
+            sr_h = day_sun['sunrise'].hour if day_sun else 6
+            ss_h = day_sun['sunset'].hour  if day_sun else 21
+            for slot_period in _available_slots_for_day(user, day_of_week):
+                if dt.hour in _slot_hours(slot_period, sr_h, ss_h):
+                    available = True
+                    break
 
         # Gusts: raw colour applied later only if slot is green
         if gust is None or spd == 0:
@@ -366,6 +376,7 @@ def get_forecast_table(spot, user=None):
             'tide_height':       None,
             'tide_pct':          None,
             'tide_colour':       '#f5f5f5',
+            'available':         available,
         }
 
         if date_key not in days:
@@ -409,8 +420,9 @@ def get_forecast_table(spot, user=None):
                             and slot['direction_usable']
                             and (tide_usable or tide_irrelevant))
                 slot['header_colour'] = '#4CAF50' if all_good else '#f0f0f0'
-                slot['gust_colour']   = slot['gust_colour_raw'] if all_good else '#f5f5f5'
-                slot['tide_colour']   = td['colour'] if (all_good and td) else '#f5f5f5'
+                # Each row always shows its own colour so the user can see why a slot isn't good
+                slot['gust_colour'] = slot['gust_colour_raw']
+                slot['tide_colour'] = td['colour'] if td else '#f5f5f5'
 
     except Exception as e:
         print(f"[Tides] Could not merge tide data: {e}")

@@ -12,7 +12,6 @@ const COMPASS_POINTS = [
 const RATING_COLORS = {
     dangerous: '#9E9E9E',   // grey
     poor:      '#FF9800',   // orange
-    okay:      '#FFC107',   // yellow
     good:      '#2196F3',   // blue
     perfect:   '#4CAF50'    // green
 };
@@ -151,11 +150,16 @@ class WindCompass {
      */
     load(data) {
         COMPASS_POINTS.forEach(p => (this.sliceRatings[p] = 'dangerous'));
-        ['perfect', 'good', 'okay', 'poor', 'dangerous'].forEach(rating => {
+        ['perfect', 'good', 'poor', 'dangerous'].forEach(rating => {
             (data[rating] || '').split(',').forEach(p => {
                 p = p.trim();
                 if (p && p in this.sliceRatings) this.sliceRatings[p] = rating;
             });
+        });
+        // Legacy: any previously-saved "okay" directions become dangerous
+        (data['okay'] || '').split(',').forEach(p => {
+            p = p.trim();
+            if (p) this.sliceRatings[p] = 'dangerous';
         });
         COMPASS_POINTS.forEach(p => {
             this.sliceEls[p].setAttribute('fill', RATING_COLORS[this.sliceRatings[p]]);
@@ -167,11 +171,14 @@ class WindCompass {
 
     /** Write current state into the hidden form inputs */
     _sync() {
-        const groups = { perfect: [], good: [], okay: [], poor: [], dangerous: [] };
+        const groups = { perfect: [], good: [], poor: [], dangerous: [] };
         COMPASS_POINTS.forEach(p => groups[this.sliceRatings[p]].push(p));
         Object.entries(groups).forEach(([rating, pts]) => {
             const el = document.getElementById('hidden_' + rating + '_directions');
             if (el) el.value = pts.join(',');
         });
+        // Clear legacy okay field if present in the form
+        const okEl = document.getElementById('hidden_okay_directions');
+        if (okEl) okEl.value = '';
     }
 }
