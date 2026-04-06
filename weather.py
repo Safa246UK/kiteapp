@@ -341,7 +341,9 @@ def get_forecast_table(spot, user=None):
         if user and user.available_slots:
             day_of_week  = dt.weekday()        # 0=Mon, 6=Sun
             sr_h = day_sun['sunrise'].hour if day_sun else 6
-            ss_h = day_sun['sunset'].hour  if day_sun else 21
+            # Use ceiling for sunset: if sunset is 19:50 the 19h slot is still usable
+            _sd  = day_sun['sunset'] if day_sun else None
+            ss_h = (_sd.hour + (1 if _sd.minute > 0 else 0)) if _sd else 21
             for slot_period in _available_slots_for_day(user, day_of_week):
                 if dt.hour in _slot_hours(slot_period, sr_h, ss_h):
                     available = True
