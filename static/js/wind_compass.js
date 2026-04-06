@@ -11,7 +11,7 @@ const COMPASS_POINTS = [
 
 const RATING_COLORS = {
     dangerous: '#9E9E9E',   // dark grey
-    poor:      '#D4849A',   // muted rose pink
+    poor:      '#C07080',   // muted rose pink
     good:      '#FF9800',   // orange
     perfect:   '#4CAF50'    // green
 };
