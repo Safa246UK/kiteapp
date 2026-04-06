@@ -10,9 +10,9 @@ const COMPASS_POINTS = [
 ];
 
 const RATING_COLORS = {
-    dangerous: '#9E9E9E',   // grey
-    poor:      '#FF9800',   // orange
-    good:      '#2196F3',   // blue
+    dangerous: '#9E9E9E',   // dark grey
+    poor:      '#F06292',   // pink
+    good:      '#FF9800',   // orange
     perfect:   '#4CAF50'    // green
 };
 

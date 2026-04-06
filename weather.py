@@ -20,10 +20,10 @@ COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
            'S','SSW','SW','WSW','W','WNW','NW','NNW']
 
 RATING_COLOURS = {
-    'perfect':     '#c8f7c5',
-    'good':        '#c5e1f7',
-    'poor':        '#ffe0b2',
-    'dangerous':   '#e0e0e0',
+    'perfect':     '#c8f7c5',   # light green
+    'good':        '#FFE0B2',   # light orange
+    'poor':        '#FCE4EC',   # light pink
+    'dangerous':   '#E0E0E0',   # dark grey
     'out_of_range':'#f5f5f5',
 }
 
