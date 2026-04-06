@@ -350,8 +350,10 @@ def get_forecast_table(spot, user=None):
                     break
 
         # Gusts: raw colour applied later only if slot is green
-        if gust is None or spd == 0:
+        if gust is None:
             gust_colour_raw = '#f5f5f5'
+        elif spd == 0:
+            gust_colour_raw = '#c8f7c5'  # wind is calm so gusts are fine; avoid divide-by-zero
         else:
             gust_pct = (gust - spd) / spd * 100
             if gust_pct <= 30:   gust_colour_raw = '#c8f7c5'
