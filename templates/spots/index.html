@@ -102,55 +102,7 @@
 
                     <hr>
 
-                    <!-- Wind Direction Compass -->
-                    <h6>Wind Directions</h6>
-                    <p class="text-muted small mb-2">
-                        Select a rating button, then click slices on the compass to assign that rating.
-                        All directions start as <strong>Dangerous</strong> (grey).
-                    </p>
-
-                    <!-- Rating selector buttons -->
-                    <div class="d-flex gap-2 flex-wrap mb-3 justify-content-center" id="rating-buttons">
-                        <button type="button" class="btn btn-sm compass-rating-btn"
-                                data-rating="perfect"
-                                style="background:#4CAF50;color:white;">
-                            🟢 Perfect
-                        </button>
-                        <button type="button" class="btn btn-sm compass-rating-btn"
-                                data-rating="good"
-                                style="background:#2196F3;color:white;">
-                            🔵 Good
-                        </button>
-                        <button type="button" class="btn btn-sm compass-rating-btn"
-                                data-rating="okay"
-                                style="background:#FFC107;color:#333;">
-                            🟡 Okay
-                        </button>
-                        <button type="button" class="btn btn-sm compass-rating-btn"
-                                data-rating="poor"
-                                style="background:#FF9800;color:white;">
-                            🟠 Poor
-                        </button>
-                        <button type="button" class="btn btn-sm compass-rating-btn"
-                                data-rating="dangerous"
-                                style="background:#9E9E9E;color:white;">
-                            ⬜ Dangerous
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary"
-                                onclick="windCompass.resetAll(); return false;">
-                            ↺ Reset All
-                        </button>
-                    </div>
-
-                    <!-- The compass -->
-                    <div id="wind-compass-container" style="width:280px; margin: auto;"></div>
-
-                    <!-- Hidden inputs that get populated by the compass JS -->
-                    <input type="hidden" name="perfect_directions"   id="hidden_perfect_directions">
-                    <input type="hidden" name="good_directions"      id="hidden_good_directions">
-                    <input type="hidden" name="okay_directions"      id="hidden_okay_directions">
-                    <input type="hidden" name="poor_directions"      id="hidden_poor_directions">
-                    <input type="hidden" name="dangerous_directions" id="hidden_dangerous_directions">
+                    {% include 'spots/_compass.html' %}
 
                     <hr>
 
