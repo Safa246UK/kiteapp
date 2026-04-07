@@ -115,7 +115,7 @@ def refresh_weather():
         flash('✅ Weather and tide data refreshed for all spots.', 'success')
     except Exception as e:
         flash(f'❌ Refresh failed: {e}', 'danger')
-    return redirect(url_for('spots.manage'))
+    return redirect(url_for('admin_bp.users'))
 
 
 @admin_bp.route('/admin/send-all-alerts', methods=['POST'])

@@ -254,10 +254,6 @@ def fetch_and_cache_weather(spot):
     }, timeout=10)
     weather_data = weather_resp.json()
 
-    # Abort if the API returned an error — don't overwrite good cached data
-    if 'error' in weather_data or 'hourly' not in weather_data:
-        raise ValueError(f"Open-Meteo error for {spot.name}: {weather_data.get('reason', weather_data)}")
-
     marine_data = None
     try:
         marine_resp = requests.get(MARINE_API, params={

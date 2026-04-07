@@ -110,20 +110,11 @@ def detail(spot_id):
 
     from datetime import datetime, timedelta
 
-    # Refresh weather if missing, older than 3 hours, or cache has no usable hourly data
-    import json as _json
+    # Refresh weather if missing or older than 3 hours
     w_cache = WeatherCache.query.filter_by(spot_id=spot_id).first()
-    _cache_empty = False
-    if w_cache and w_cache.forecast_json:
-        try:
-            _d = _json.loads(w_cache.forecast_json)
-            _cache_empty = not _d.get('weather', {}).get('hourly', {}).get('time')
-        except Exception:
-            _cache_empty = True
     weather_stale = (
         not w_cache or
         w_cache.fetched_at is None or
-        _cache_empty or
         w_cache.fetched_at < datetime.utcnow() - timedelta(hours=3)
     )
     if weather_stale:
