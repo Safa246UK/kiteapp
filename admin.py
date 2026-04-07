@@ -127,6 +127,13 @@ def refresh_weather():
         refresh_all_tides()
         refresh_all_summaries()
         if from_cron:
+            # Also send any due alerts (users for whom it is now ALERT_HOUR locally)
+            try:
+                from alerts import send_due_alerts
+                app_url = request.host_url.rstrip('/')
+                send_due_alerts(app_url)
+            except Exception as ae:
+                print(f"[Cron] Alert send failed: {ae}")
             return 'OK', 200
         flash('✅ Weather and tide data refreshed for all spots.', 'success')
     except Exception as e:

@@ -10,8 +10,11 @@ For each user with whatsapp_enabled=True:
   - Alert if any contiguous period has >= 3 good hours
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from models import db, User, UserFavouriteSpot, WeatherCache, TideCache
+
+ALERT_HOUR = 7   # Local hour at which each user receives their daily alert
 from weather import (_parse_weather_cache, _tide_irrelevant,
                      _sun_hours, _slot_hours, _available_slots_for_day,
                      _contiguous_groups, _good_hours_in_set)
@@ -215,4 +218,38 @@ def send_all_alerts(app_url=''):
     for user in users:
         sent, detail = send_alerts_for_user(user, app_url)
         results.append((user, sent, detail))
+    return results
+
+
+def send_due_alerts(app_url=''):
+    """Send alerts only to users for whom it is currently ALERT_HOUR in their timezone.
+
+    Called by the hourly cron job so each user receives their alert at
+    the same local time regardless of where in the world they are.
+    Returns list of (user, sent, detail) tuples.
+    """
+    now_utc = datetime.now(timezone.utc)
+
+    users = User.query.filter(
+        User.is_active == True,
+        User.notification_type.isnot(None),
+        User.notification_type != 'none'
+    ).all()
+
+    results = []
+    for user in users:
+        tz_name = user.timezone or 'Europe/London'
+        try:
+            tz = ZoneInfo(tz_name)
+        except ZoneInfoNotFoundError:
+            tz = ZoneInfo('Europe/London')
+
+        local_hour = now_utc.astimezone(tz).hour
+        if local_hour != ALERT_HOUR:
+            continue
+
+        print(f"[Alerts] Sending due alert to {user.email} (local hour={local_hour} in {tz_name})")
+        sent, detail = send_alerts_for_user(user, app_url)
+        results.append((user, sent, detail))
+
     return results
