@@ -20,10 +20,11 @@ def refresh_all_weather():
 
 
 def refresh_all_tides():
-    """Fetch and cache tide data for every active spot."""
+    """Fetch and cache tide data for every active spot, at most once per 24 hours."""
     import os
+    from datetime import datetime, timedelta
     from app import app
-    from models import Spot
+    from models import Spot, TideCache
     from tides import fetch_and_cache_tides
 
     api_key = os.environ.get('ADMIRALTY_API_KEY', '')
@@ -31,11 +32,18 @@ def refresh_all_tides():
         print("[Tides] No ADMIRALTY_API_KEY set — skipping tide refresh")
         return
 
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+
     with app.app_context():
         spots = Spot.query.filter_by(is_retired=False).all()
         for spot in spots:
+            cache = TideCache.query.filter_by(spot_id=spot.id).first()
+            if cache and cache.fetched_at and cache.fetched_at > cutoff:
+                print(f"[Tides] Skipping {spot.name} — cache is less than 24h old")
+                continue
             try:
                 fetch_and_cache_tides(spot, api_key)
+                print(f"[Tides] Updated: {spot.name}")
             except Exception as e:
                 print(f"[Tides] Failed for {spot.name}: {e}")
 
