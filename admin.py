@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from models import db, User, Spot, UserFavouriteSpot, AdminSettings, PushSubscription
@@ -103,19 +104,36 @@ def send_whatsapp(user_id):
 
 
 @admin_bp.route('/admin/refresh-weather', methods=['POST'])
-@login_required
-@admin_required
 def refresh_weather():
-    """Manually trigger a weather + tide refresh for all spots."""
+    """Trigger a weather + tide refresh for all spots.
+
+    Accepts either:
+    - A logged-in admin session (manual button press), or
+    - A CRON_SECRET token in the X-Cron-Secret header (Render cron job).
+    """
+    cron_secret = os.environ.get('CRON_SECRET', '')
+    incoming    = request.headers.get('X-Cron-Secret', '')
+    from_cron   = cron_secret and incoming == cron_secret
+
+    if not from_cron:
+        # Fall back to normal admin session check
+        if not current_user.is_authenticated or not current_user.is_admin:
+            from flask import abort
+            abort(403)
+
     from scheduler import refresh_all_weather, refresh_all_tides, refresh_all_summaries
     try:
         refresh_all_weather()
         refresh_all_tides()
         refresh_all_summaries()
+        if from_cron:
+            return 'OK', 200
         flash('✅ Weather and tide data refreshed for all spots.', 'success')
     except Exception as e:
+        if from_cron:
+            return f'Error: {e}', 500
         flash(f'❌ Refresh failed: {e}', 'danger')
-    return redirect(url_for('admin_bp.users'))
+    return redirect(url_for('spots.manage'))
 
 
 @admin_bp.route('/admin/send-all-alerts', methods=['POST'])
