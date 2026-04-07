@@ -102,7 +102,7 @@ def redirect_first_time_visitors():
     # Skip: already seen welcome, or static/infrastructure endpoints
     if request.cookies.get('seen_welcome'):
         return
-    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome'}
+    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome', 'admin_bp.refresh_weather'}
     if request.endpoint in skip_endpoints:
         return
     # Logged-in users never need the welcome detour
