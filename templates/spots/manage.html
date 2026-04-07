@@ -3,7 +3,13 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>⚙️ Manage Spots</h2>
-    <span class="text-muted">{{ spots|length }} spot(s) total</span>
+    <div class="d-flex gap-2 align-items-center">
+        <span class="text-muted">{{ spots|length }} spot(s) total</span>
+        <form method="POST" action="{{ url_for('admin_bp.refresh_weather') }}"
+              onsubmit="return confirm('Refresh weather and tide data for all spots now?')">
+            <button class="btn btn-outline-primary btn-sm">🌬️ Refresh Weather</button>
+        </form>
+    </div>
 </div>
 
 <div class="table-responsive">

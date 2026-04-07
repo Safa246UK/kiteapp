@@ -141,6 +141,16 @@ def detail(spot_id):
             print(f"[Tides] On-demand fetch failed: {e}")
 
     forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot, user=current_user)
+
+    # If cache exists but produced no slots (e.g. initial fetch returned bad data), force a re-fetch
+    if not forecast_slots and WeatherCache.query.filter_by(spot_id=spot_id).first():
+        try:
+            from weather import fetch_and_cache_weather
+            fetch_and_cache_weather(spot)
+            forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot, user=current_user)
+        except Exception as e:
+            print(f"[Weather] Re-fetch for empty forecast failed: {e}")
+
     tc = TideCache.query.filter_by(spot_id=spot_id).first()
     no_tide_station = not spot.is_landlocked and tc is not None and not tc.station_id
     return render_template('spots/detail.html', spot=spot, notes=notes,
