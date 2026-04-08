@@ -57,6 +57,13 @@ def add():
         flash('Name and location are required.', 'danger')
         return redirect(url_for('spots.index'))
 
+    # Auto-detect timezone from coordinates
+    try:
+        from timezonefinder import TimezoneFinder
+        spot_tz = TimezoneFinder().timezone_at(lat=float(lat), lng=float(lng)) or 'Europe/London'
+    except Exception:
+        spot_tz = 'Europe/London'
+
     is_seasonal   = 'is_seasonal'   in request.form
     is_landlocked = 'is_landlocked' in request.form
     spot = Spot(
@@ -73,6 +80,7 @@ def add():
         dangerous_directions=dangerous,
         created_by=current_user.id,
         is_landlocked=is_landlocked,
+        timezone=spot_tz,
         season_start_month=int(request.form.get('season_start_month', 1)) if is_seasonal else None,
         season_start_day=int(request.form.get('season_start_day', 1))     if is_seasonal else None,
         season_end_month=int(request.form.get('season_end_month', 12))    if is_seasonal else None,
@@ -245,6 +253,11 @@ def edit(spot_id):
         spot.description = request.form.get('description', '').strip()
         spot.latitude    = float(request.form.get('latitude'))
         spot.longitude   = float(request.form.get('longitude'))
+        try:
+            from timezonefinder import TimezoneFinder
+            spot.timezone = TimezoneFinder().timezone_at(lat=spot.latitude, lng=spot.longitude) or 'Europe/London'
+        except Exception:
+            spot.timezone = spot.timezone or 'Europe/London'
         spot.min_tide_percent = float(request.form.get('min_tide_percent', 20))
         spot.max_tide_percent = float(request.form.get('max_tide_percent', 85))
         spot.perfect_directions   = request.form.get('perfect_directions', '')

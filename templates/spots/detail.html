@@ -10,7 +10,10 @@
                 <span class="badge bg-secondary ms-2">Retired</span>
             {% endif %}
         </h2>
-        <p class="text-muted">{{ spot.description }}</p>
+        <p class="text-muted mb-1">{{ spot.description }}</p>
+        {% if spot.timezone %}
+        <p class="text-muted small mb-2">🌍 {{ spot.timezone }}</p>
+        {% endif %}
         {% if current_user.is_admin %}
         <div class="mb-3">
             <a href="{{ url_for('spots.edit', spot_id=spot.id) }}" class="btn btn-sm btn-warning me-2">✏️ Edit Spot</a>

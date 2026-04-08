@@ -76,6 +76,9 @@ class Spot(db.Model):
     poor_directions = db.Column(db.String(200), default='')
     dangerous_directions = db.Column(db.String(200), default='')
 
+    # Timezone (IANA, auto-populated from coordinates via timezonefinder)
+    timezone = db.Column(db.String(60), nullable=True)
+
     # Landlocked — tide data not relevant (lake, reservoir, etc.)
     is_landlocked = db.Column(db.Boolean, default=False)
 
