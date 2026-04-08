@@ -105,7 +105,8 @@ def redirect_first_time_visitors():
     if request.cookies.get('seen_welcome'):
         return
     skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome', 'admin_bp.refresh_weather',
-                      'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification'}
+                      'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification',
+                      'auth.reset_password', 'auth.forgot_password', 'auth.login', 'auth.register'}
     if request.endpoint in skip_endpoints:
         return
     # Logged-in users never need the welcome detour
