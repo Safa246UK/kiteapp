@@ -44,9 +44,9 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>📅 Forecast (7 days)</strong>
+                <strong>📅 Forecast (7 days, local time, daylight only)</strong>
                 {% if fetched_at %}
-                    <small class="text-muted">Updated {{ fetched_at.strftime('%d %b %H:%M') }}</small>
+                    <small class="text-muted">Last updated {{ fetched_at.strftime('%d %b %Y %H:%M') }} UTC</small>
                 {% endif %}
             </div>
             <div class="card-body p-0">
