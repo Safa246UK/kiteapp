@@ -132,28 +132,40 @@ def _contiguous_groups(available_slots, sunrise_h, sunset_h):
 
 
 def _good_hours_in_set(hour_set, date_key, spot, user,
-                       times, speeds, dirs, tide_data, tide_irrelevant, now):
+                       times, speeds, dirs, tide_data, tide_irrelevant, now,
+                       spot_tz=None):
     """Count good hours within hour_set for the given date.
 
+    date_key and hour_set are in spot-local time when spot_tz is provided.
     Returns (count, conditions_str, start_hour) where start_hour is the
     first hour (int) with good conditions, or None if none found.
     """
+    from datetime import timezone as _utc_tz
     good_speeds, good_dirs, good_hours = [], [], []
 
     for i, time_str in enumerate(times):
-        dt = datetime.fromisoformat(time_str)
-        if dt.strftime('%Y-%m-%d') != date_key or dt < now or dt.hour not in hour_set:
+        dt_utc = datetime.fromisoformat(time_str)   # naive UTC
+        if spot_tz is not None:
+            dt_local   = dt_utc.replace(tzinfo=_utc_tz.utc).astimezone(spot_tz)
+            local_date = dt_local.strftime('%Y-%m-%d')
+            local_hour = dt_local.hour
+        else:
+            dt_local   = dt_utc
+            local_date = dt_utc.strftime('%Y-%m-%d')
+            local_hour = dt_utc.hour
+
+        if local_date != date_key or dt_utc < now or local_hour not in hour_set:
             continue
         spd     = round(speeds[i]) if i < len(speeds) else 0
         compass = degrees_to_compass(dirs[i] if i < len(dirs) else 0)
         wind_ok = user.min_wind <= spd <= user.max_wind
         dir_ok  = _direction_rating(spot, compass) in ('perfect', 'good', 'okay')
-        td      = tide_data.get(date_key, {}).get(dt.hour)
+        td      = tide_data.get(date_key, {}).get(local_hour)
         tide_ok = bool(td and spot.min_tide_percent <= td['pct'] <= spot.max_tide_percent)
         if wind_ok and dir_ok and (tide_ok or tide_irrelevant):
             good_speeds.append(spd)
             good_dirs.append(compass)
-            good_hours.append(dt.hour)
+            good_hours.append(local_hour)
 
     if not good_speeds:
         return 0, '', None
@@ -546,7 +558,23 @@ def get_day_summaries_for_user(spot_id, user):
                 for lbl in ('Today', 'Tomorrow', 'The next day')]
 
     times, speeds, dirs, _, _, _, _, sun = _parse_weather_cache(w_cache)
-    target_dates    = [date.today() + timedelta(days=i) for i in range(3)]
+
+    # Work in spot-local time so availability hours match the spot's wall clock
+    from zoneinfo import ZoneInfo
+    from datetime import timezone as _utc_tz
+    spot_tz  = ZoneInfo(spot.timezone or 'Europe/London')
+    spot_now = datetime.now(_utc_tz.utc).astimezone(spot_tz)
+
+    # Build a sun dict keyed by spot-local dates with spot-local datetimes
+    local_sun = {}
+    for utc_date_str, day_data in sun.items():
+        sr_local = day_data['sunrise'].replace(tzinfo=_utc_tz.utc).astimezone(spot_tz)
+        ss_local = day_data['sunset'].replace(tzinfo=_utc_tz.utc).astimezone(spot_tz)
+        local_sun[sr_local.strftime('%Y-%m-%d')] = {
+            'sunrise': sr_local, 'sunset': ss_local
+        }
+
+    target_dates    = [spot_now.date() + timedelta(days=i) for i in range(3)]
     tide_irrelevant = _tide_irrelevant(spot)
     tide_data       = {}
     now             = datetime.utcnow()
@@ -564,14 +592,14 @@ def get_day_summaries_for_user(spot_id, user):
     result = []
     for i, label in enumerate(('Today', 'Tomorrow', 'The next day')):
         target    = target_dates[i]
-        date_key  = target.isoformat()
-        available = _available_slots_for_day(user, target.weekday())
+        date_key  = target.isoformat()                          # spot-local date
+        available = _available_slots_for_day(user, target.weekday())  # spot-local weekday
 
         if not available:
             result.append({'label': label, 'colour': COLOUR_HEX['grey'], 'hours': None})
             continue
 
-        sunrise_h, sunset_h = _sun_hours(date_key, sun)
+        sunrise_h, sunset_h = _sun_hours(date_key, local_sun)  # spot-local hours
         groups      = _contiguous_groups(available, sunrise_h, sunset_h)
         best_hours  = 0
         for hour_set in groups:
@@ -579,7 +607,7 @@ def get_day_summaries_for_user(spot_id, user):
                 continue
             count, _, _sh = _good_hours_in_set(
                 hour_set, date_key, spot, user,
-                times, speeds, dirs, tide_data, tide_irrelevant, now)
+                times, speeds, dirs, tide_data, tide_irrelevant, now, spot_tz)
             if count > best_hours:
                 best_hours = count
 
