@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, AdminSettings
 from flask_mail import Message
@@ -27,6 +27,52 @@ def verify_reset_token(token, max_age=3600):
     return email
 
 
+def generate_verify_token(email):
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return s.dumps(email, salt='email-verify')
+
+
+def verify_email_token(token, max_age=86400):
+    """Verify an email confirmation token. Valid for 24 hours."""
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        email = s.loads(token, salt='email-verify', max_age=max_age)
+    except (SignatureExpired, BadSignature):
+        return None
+    return email
+
+
+def send_verification_email(user):
+    token = generate_verify_token(user.email)
+    verify_url = url_for('auth.verify_email', token=token, _external=True)
+    msg = Message('WindChaser — Please verify your email address',
+                  recipients=[user.email])
+    msg.body = f"""Hi {user.first_name},
+
+Welcome to WindChaser! Please verify your email address by clicking the link below:
+
+{verify_url}
+
+This link is valid for 24 hours. If you did not create an account, you can safely ignore this email.
+
+— The WindChaser Team
+"""
+    msg.html = f"""
+<p>Hi {user.first_name},</p>
+<p>Welcome to WindChaser! Please verify your email address by clicking the button below:</p>
+<p style="text-align:center; margin:2em 0;">
+  <a href="{verify_url}"
+     style="background:#0d6efd;color:white;padding:12px 28px;border-radius:6px;
+            text-decoration:none;font-weight:bold;font-size:1rem;">
+    ✅ Verify my email address
+  </a>
+</p>
+<p>This link is valid for 24 hours. If you did not create an account, you can safely ignore this email.</p>
+<p>— The WindChaser Team</p>
+"""
+    _mail().send(msg)
+
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -39,6 +85,10 @@ def login():
             if not user.is_active:
                 flash('Your account has been disabled. Please contact the admin.', 'danger')
                 return redirect(url_for('auth.login'))
+            if not user.email_verified:
+                session['pending_verify_email'] = user.email
+                flash('Please verify your email address before logging in. Check your inbox for the verification link.', 'warning')
+                return redirect(url_for('auth.verify_pending'))
             login_user(user, remember=True)
             return redirect(url_for('main.index'))
         flash('Invalid email or password.', 'danger')
@@ -88,6 +138,7 @@ def register():
         is_first_user = User.query.count() == 0
         user = User(email=email, first_name=first_name, last_name=last_name,
                     password=hashed, is_admin=is_first_user,
+                    email_verified=is_first_user,  # auto-verify the first (admin) user
                     weight_kg=weight_kg, min_wind=min_wind, max_wind=max_wind,
                     available_slots=available_slots or None,
                     whatsapp_dial_code=whatsapp_dial_code,
@@ -104,9 +155,70 @@ def register():
             db.session.add(AdminSettings())
 
         db.session.commit()
-        flash('Account created! Please log in.', 'success')
-        return redirect(url_for('auth.login'))
+
+        if is_first_user:
+            flash('Admin account created! Please log in.', 'success')
+            return redirect(url_for('auth.login'))
+
+        # Send verification email
+        try:
+            send_verification_email(user)
+        except Exception as e:
+            print(f"[Email] Verification send failed: {e}")
+            flash('Account created but we could not send the verification email. Please contact windchaser@hamptons.me.uk.', 'warning')
+            return redirect(url_for('auth.login'))
+
+        session['pending_verify_email'] = email
+        return redirect(url_for('auth.verify_pending'))
     return render_template('auth/register.html')
+
+
+@auth.route('/verify-pending')
+def verify_pending():
+    email = session.get('pending_verify_email')
+    return render_template('auth/verify_pending.html', email=email)
+
+
+@auth.route('/verify-email/<token>')
+def verify_email(token):
+    email = verify_email_token(token)
+    if not email:
+        flash('That verification link is invalid or has expired. Please request a new one.', 'danger')
+        return redirect(url_for('auth.verify_pending'))
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('Account not found.', 'danger')
+        return redirect(url_for('auth.login'))
+    if user.email_verified:
+        flash('Your email is already verified. Please log in.', 'info')
+        return redirect(url_for('auth.login'))
+    user.email_verified = True
+    db.session.commit()
+    flash('✅ Email verified! Welcome to WindChaser — please log in.', 'success')
+    return redirect(url_for('auth.login'))
+
+
+@auth.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    email = request.form.get('email', '').strip().lower() or session.get('pending_verify_email')
+    if not email:
+        flash('Could not determine your email address. Please register again.', 'danger')
+        return redirect(url_for('auth.register'))
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('No account found with that email address.', 'danger')
+        return redirect(url_for('auth.register'))
+    if user.email_verified:
+        flash('Your email is already verified. Please log in.', 'info')
+        return redirect(url_for('auth.login'))
+    try:
+        send_verification_email(user)
+        session['pending_verify_email'] = email
+        flash('Verification email resent — please check your inbox.', 'success')
+    except Exception as e:
+        print(f"[Email] Resend failed: {e}")
+        flash('Could not send the email. Please try again or contact windchaser@hamptons.me.uk.', 'danger')
+    return redirect(url_for('auth.verify_pending'))
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])

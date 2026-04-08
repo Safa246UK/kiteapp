@@ -43,6 +43,8 @@ def run_migrations():
         ("user", "notification_type", "VARCHAR(10) DEFAULT 'push'"),
         ("user", "available_slots",   "TEXT"),
         ("push_subscription", "created_at", "TIMESTAMP"),
+        ("user", "email_verified",    "BOOLEAN DEFAULT TRUE"),  # existing users pre-verified
+        ("spot", "timezone",          "VARCHAR(60)"),
     ]
     with db.engine.connect() as conn:
         for table, column, col_type in migrations:
@@ -102,7 +104,8 @@ def redirect_first_time_visitors():
     # Skip: already seen welcome, or static/infrastructure endpoints
     if request.cookies.get('seen_welcome'):
         return
-    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome', 'admin_bp.refresh_weather'}
+    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome', 'admin_bp.refresh_weather',
+                      'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification'}
     if request.endpoint in skip_endpoints:
         return
     # Logged-in users never need the welcome detour

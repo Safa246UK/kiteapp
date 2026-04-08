@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 text-center">
+                <div style="font-size:3rem; margin-bottom:1rem;">📧</div>
+                <h3 class="mb-2">Check your inbox</h3>
+                <p class="text-muted mb-1">We've sent a verification email to:</p>
+                {% if email %}
+                    <p class="fw-bold mb-3">{{ email }}</p>
+                {% else %}
+                    <p class="fw-bold mb-3">your email address</p>
+                {% endif %}
+                <p class="text-muted mb-4">
+                    Click the button in that email to verify your address and activate your account.
+                    The link is valid for <strong>24 hours</strong>.
+                </p>
+
+                <div class="alert alert-info text-start py-2 px-3 mb-4" style="font-size:0.9rem;">
+                    💡 <strong>Tip:</strong> Check your spam or junk folder if the email doesn't arrive within a couple of minutes.
+                </div>
+
+                <hr>
+                <p class="text-muted small mb-2">Didn't receive it?</p>
+                <form method="POST" action="{{ url_for('auth.resend_verification') }}">
+                    {% if email %}
+                        <input type="hidden" name="email" value="{{ email }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        🔁 Resend verification email
+                    </button>
+                </form>
+
+                <hr>
+                <p class="text-center mb-0 small">
+                    <a href="{{ url_for('auth.login') }}">← Back to login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
