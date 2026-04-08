@@ -209,7 +209,7 @@ def _count_good_hours(spot, times, speeds, dirs, sun,
 
     Returns a dict keyed by ISO date string.
     """
-    now = datetime.now()
+    now = datetime.utcnow()
     day_counts = {d.isoformat(): 0 for d in target_dates}
 
     for i, time_str in enumerate(times):
@@ -249,7 +249,7 @@ def fetch_and_cache_weather(spot):
         'hourly':          'windspeed_10m,winddirection_10m,windgusts_10m,weathercode,temperature_2m',
         'daily':           'sunrise,sunset',
         'wind_speed_unit': 'kn',
-        'timezone':        'Europe/London',
+        'timezone':        'UTC',
         'forecast_days':   7,
     }, timeout=10)
     weather_data = weather_resp.json()
@@ -264,7 +264,7 @@ def fetch_and_cache_weather(spot):
             'latitude':      spot.latitude,
             'longitude':     spot.longitude,
             'hourly':        'wave_height',
-            'timezone':      'Europe/London',
+            'timezone':      'UTC',
             'forecast_days': 7,
         }, timeout=10)
         marine_data = marine_resp.json()
@@ -303,19 +303,28 @@ def get_forecast_table(spot, user=None):
 
     times, speeds, dirs, gusts, codes, temps, waves, sun = _parse_weather_cache(cache)
 
-    now  = datetime.now()
+    from zoneinfo import ZoneInfo
+    from datetime import timezone as _utc_tz
+    _spot_tz = ZoneInfo(spot.timezone or 'Europe/London')
+    now_utc  = datetime.now(_utc_tz.utc)
     days = {}
 
     for i, time_str in enumerate(times):
-        dt       = datetime.fromisoformat(time_str)
-        date_key = dt.strftime('%Y-%m-%d')
+        # Cached timestamps are UTC; convert to spot-local time for display
+        dt_utc         = datetime.fromisoformat(time_str).replace(tzinfo=_utc_tz.utc)
+        dt_local       = dt_utc.astimezone(_spot_tz)
+        utc_date_key   = dt_utc.strftime('%Y-%m-%d')    # matches keys in sun dict
+        local_date_key = dt_local.strftime('%Y-%m-%d')  # used for display grouping
 
-        if dt < now:
+        if dt_utc < now_utc:
             continue
 
-        day_sun = sun.get(date_key)
-        if day_sun and (dt < day_sun['sunrise'] or dt > day_sun['sunset']):
-            continue
+        day_sun = sun.get(utc_date_key)
+        if day_sun:
+            _sr_utc = day_sun['sunrise'].replace(tzinfo=_utc_tz.utc)
+            _ss_utc = day_sun['sunset'].replace(tzinfo=_utc_tz.utc)
+            if dt_utc < _sr_utc or dt_utc > _ss_utc:
+                continue
 
         spd     = round(speeds[i])   if i < len(speeds) else 0
         gust    = round(gusts[i])    if i < len(gusts)  else None
@@ -340,16 +349,16 @@ def get_forecast_table(spot, user=None):
         # Direction: always coloured by its own rating
         wind_dir_colour = RATING_COLOURS.get(dir_rating, '#f5f5f5')
 
-        # Availability: is this hour in the user's "Times I can kite" slots?
+        # Availability: use spot-local time for day-of-week and hour matching
         available = False
         if user and user.available_slots:
-            day_of_week  = dt.weekday()        # 0=Mon, 6=Sun
-            sr_h = day_sun['sunrise'].hour if day_sun else 6
-            # Use ceiling for sunset: if sunset is 19:50 the 19h slot is still usable
-            _sd  = day_sun['sunset'] if day_sun else None
-            ss_h = (_sd.hour + (1 if _sd.minute > 0 else 0)) if _sd else 21
+            day_of_week = dt_local.weekday()
+            _sr_local   = day_sun['sunrise'].replace(tzinfo=_utc_tz.utc).astimezone(_spot_tz) if day_sun else None
+            _ss_local   = day_sun['sunset'].replace(tzinfo=_utc_tz.utc).astimezone(_spot_tz) if day_sun else None
+            sr_h = _sr_local.hour if _sr_local else 6
+            ss_h = (_ss_local.hour + (1 if _ss_local.minute > 0 else 0)) if _ss_local else 21
             for slot_period in _available_slots_for_day(user, day_of_week):
-                if dt.hour in _slot_hours(slot_period, sr_h, ss_h):
+                if dt_local.hour in _slot_hours(slot_period, sr_h, ss_h):
                     available = True
                     break
 
@@ -365,7 +374,7 @@ def get_forecast_table(spot, user=None):
             else:                gust_colour_raw = '#ffcccc'
 
         slot = {
-            'time':              dt.strftime('%Hh'),
+            'time':              dt_local.strftime('%Hh'),
             'wind_speed':        spd,
             'wind_gust':         gust,
             'wind_dir':          compass,
@@ -387,16 +396,19 @@ def get_forecast_table(spot, user=None):
             'available':         available,
         }
 
-        if date_key not in days:
-            sr = day_sun['sunrise'].strftime('%H:%M') if day_sun else '—'
-            ss = day_sun['sunset'].strftime('%H:%M')  if day_sun else '—'
-            days[date_key] = {
-                'label':   dt.strftime('%A %d %b'),
+        if local_date_key not in days:
+            if day_sun:
+                sr = day_sun['sunrise'].replace(tzinfo=_utc_tz.utc).astimezone(_spot_tz).strftime('%H:%M')
+                ss = day_sun['sunset'].replace(tzinfo=_utc_tz.utc).astimezone(_spot_tz).strftime('%H:%M')
+            else:
+                sr, ss = '—', '—'
+            days[local_date_key] = {
+                'label':   dt_local.strftime('%A %d %b'),
                 'sunrise': sr,
                 'sunset':  ss,
                 'slots':   [],
             }
-        days[date_key]['slots'].append(slot)
+        days[local_date_key]['slots'].append(slot)
 
     # Merge tide data
     try:
@@ -537,7 +549,7 @@ def get_day_summaries_for_user(spot_id, user):
     target_dates    = [date.today() + timedelta(days=i) for i in range(3)]
     tide_irrelevant = _tide_irrelevant(spot)
     tide_data       = {}
-    now             = datetime.now()
+    now             = datetime.utcnow()
 
     if not tide_irrelevant:
         t_cache = TideCache.query.filter_by(spot_id=spot_id).first()
