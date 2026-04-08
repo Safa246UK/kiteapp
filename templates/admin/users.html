@@ -66,7 +66,14 @@
         <tbody>
             {% for user in users %}
             <tr class="{% if not user.is_active %}table-secondary text-muted{% endif %}">
-                <td>{{ user.email }}</td>
+                <td>
+                    {{ user.email }}
+                    {% if user.email_verified %}
+                        <span title="Email verified" style="color:#198754;">&#10003;</span>
+                    {% else %}
+                        <span title="Email not verified" style="color:#dc3545;">&#10007;</span>
+                    {% endif %}
+                </td>
                 <td>{{ user.name }}</td>
                 <td>
                     {% if user.whatsapp_number %}

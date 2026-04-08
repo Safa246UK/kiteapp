@@ -19,7 +19,17 @@
             </div>
             <div class="card-body">
                 <table class="table table-sm mb-0">
-                    <tr><td class="text-muted">Email</td><td>{{ user.email }}</td></tr>
+                    <tr>
+                        <td class="text-muted">Email</td>
+                        <td>
+                            {{ user.email }}
+                            {% if user.email_verified %}
+                                <span title="Email verified" style="color:#198754; font-weight:bold;">&#10003;</span>
+                            {% else %}
+                                <span title="Email not verified" style="color:#dc3545; font-weight:bold;">&#10007;</span>
+                            {% endif %}
+                        </td>
+                    </tr>
                     <tr>
                         <td class="text-muted">Phone / WhatsApp</td>
                         <td>
