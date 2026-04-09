@@ -160,6 +160,9 @@ def detail(spot_id):
     forecast_slots, fetched_at, has_tide, tide_real = get_forecast_table(spot, user=current_user)
     tc = TideCache.query.filter_by(spot_id=spot_id).first()
     no_tide_station = not spot.is_landlocked and tc is not None and not tc.station_id
+    from log_utils import log_event
+    log_event(current_user.email, 'spot_viewed', detail=spot.name,
+              spot_id=spot.id, user_id=current_user.id)
     return render_template('spots/detail.html', spot=spot, notes=notes,
                            watchers=watchers, is_favourite=is_favourite,
                            compass_points=COMPASS_POINTS,

@@ -39,6 +39,7 @@
                         {% if current_user.is_admin %}
                             <a href="{{ url_for('spots.manage') }}" class="btn btn-warning btn-sm">Manage Spots</a>
                             <a href="{{ url_for('admin_bp.users') }}" class="btn btn-warning btn-sm">Manage Users</a>
+                            <a href="{{ url_for('admin_bp.logs') }}" class="btn btn-warning btn-sm">Logs</a>
                         {% endif %}
                         <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
                     {% else %}

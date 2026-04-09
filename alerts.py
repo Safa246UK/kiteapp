@@ -228,7 +228,10 @@ def send_due_alerts(app_url=''):
     the same local time regardless of where in the world they are.
     Returns list of (user, sent, detail) tuples.
     """
+    from log_utils import log_event
     now_utc = datetime.now(timezone.utc)
+
+    log_event('CRON', 'cron_started', detail=f"Hourly cron started at {now_utc.strftime('%Y-%m-%d %H:%M')} UTC")
 
     users = User.query.filter(
         User.is_active == True,
@@ -249,7 +252,24 @@ def send_due_alerts(app_url=''):
             continue
 
         print(f"[Alerts] Sending due alert to {user.email} (local hour={local_hour} in {tz_name})")
-        sent, detail = send_alerts_for_user(user, app_url)
-        results.append((user, sent, detail))
+        try:
+            sent, detail = send_alerts_for_user(user, app_url)
+            if sent:
+                log_event('CRON', 'alert_sent',
+                          detail=f"{user.email} — {detail}",
+                          user_id=user.id)
+            else:
+                log_event('CRON', 'alert_skipped',
+                          detail=f"{user.email} — {detail}",
+                          user_id=user.id)
+            results.append((user, sent, detail))
+        except Exception as e:
+            log_event('CRON', 'alert_failed',
+                      detail=f"{user.email} — {e}",
+                      user_id=user.id)
+            results.append((user, False, str(e)))
+
+    from log_utils import purge_old_logs
+    purge_old_logs()
 
     return results

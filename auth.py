@@ -90,6 +90,8 @@ def login():
                 flash('Please verify your email address before logging in. Check your inbox for the verification link.', 'warning')
                 return redirect(url_for('auth.verify_pending'))
             login_user(user, remember=True)
+            from log_utils import log_event
+            log_event(user.email, 'login', user_id=user.id)
             return redirect(url_for('main.index'))
         flash('Invalid email or password.', 'danger')
     return render_template('auth/login.html')
@@ -157,6 +159,8 @@ def register():
         db.session.commit()
 
         if is_first_user:
+            from log_utils import log_event
+            log_event(email, 'register', detail='Admin account (auto-verified)', user_id=user.id)
             flash('Admin account created! Please log in.', 'success')
             return redirect(url_for('auth.login'))
 
@@ -168,6 +172,8 @@ def register():
             flash('Account created but we could not send the verification email. Please contact windchaser@hamptons.me.uk.', 'warning')
             return redirect(url_for('auth.login'))
 
+        from log_utils import log_event
+        log_event(email, 'register', detail='Verification email sent', user_id=user.id)
         session['pending_verify_email'] = email
         return redirect(url_for('auth.verify_pending'))
     return render_template('auth/register.html')
@@ -194,6 +200,8 @@ def verify_email(token):
         return redirect(url_for('auth.login'))
     user.email_verified = True
     db.session.commit()
+    from log_utils import log_event
+    log_event(user.email, 'email_verified', user_id=user.id)
     flash('✅ Email verified! Welcome to WindChaser — please log in.', 'success')
     return redirect(url_for('auth.login'))
 
@@ -276,6 +284,8 @@ def reset_password(token):
         if user:
             user.password = bcrypt.generate_password_hash(password).decode('utf-8')
             db.session.commit()
+            from log_utils import log_event
+            log_event(user.email, 'password_reset', user_id=user.id)
             flash('Password updated! Please log in.', 'success')
             return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', token=token)
@@ -290,5 +300,7 @@ def profile():
 @auth.route('/logout')
 @login_required
 def logout():
+    from log_utils import log_event
+    log_event(current_user.email, 'logout', user_id=current_user.id)
     logout_user()
     return redirect(url_for('auth.login'))

@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">📋 Activity Logs</h2>
+    <small class="text-muted">Retention: {{ retention }} days &nbsp;|&nbsp; Showing newest first, max 1,000 entries</small>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="card card-body mb-4 py-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">Time window</label>
+            <select name="hours" class="form-select form-select-sm">
+                {% for h, label in [(1,'Last 1 hour'),(6,'Last 6 hours'),(24,'Last 24 hours'),
+                                    (48,'Last 48 hours'),(168,'Last 7 days'),(720,'Last 30 days')] %}
+                <option value="{{ h }}" {% if hours == h %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">Event type</label>
+            <select name="event_type" class="form-select form-select-sm">
+                <option value="">All types</option>
+                {% for et in event_types %}
+                <option value="{{ et }}" {% if etype == et %}selected{% endif %}>{{ et }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">Actor (email or CRON)</label>
+            <input type="text" name="actor" class="form-control form-control-sm"
+                   value="{{ actor }}" placeholder="e.g. ken@hamptons.me.uk">
+        </div>
+        <div class="col-sm-3">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+        </div>
+    </div>
+</form>
+
+<!-- Results -->
+{% if entries %}
+<div class="table-responsive">
+    <table class="table table-sm table-hover align-middle" style="font-size:0.85rem;">
+        <thead class="table-dark">
+            <tr>
+                <th style="white-space:nowrap;">Timestamp (UTC)</th>
+                <th>Actor</th>
+                <th>Event</th>
+                <th>Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr class="
+                {% if 'FAILED' in (e.detail or '') %}table-danger
+                {% elif e.event_type == 'alert_sent' %}table-success
+                {% elif e.event_type == 'alert_skipped' %}table-warning
+                {% elif e.event_type == 'cron_started' %}table-info
+                {% endif %}
+            ">
+                <td style="white-space:nowrap;">{{ e.timestamp.strftime('%d %b %Y %H:%M:%S') }}</td>
+                <td style="white-space:nowrap;">
+                    {% if e.actor == 'CRON' %}
+                        <span class="badge bg-secondary">CRON</span>
+                    {% else %}
+                        {{ e.actor }}
+                    {% endif %}
+                </td>
+                <td><code>{{ e.event_type }}</code></td>
+                <td>{{ e.detail or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-muted small">{{ entries|length }} entr{{ 'y' if entries|length == 1 else 'ies' }} shown.</p>
+{% else %}
+<div class="alert alert-secondary">No log entries found for the selected filters.</div>
+{% endif %}
+{% endblock %}

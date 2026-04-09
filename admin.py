@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
-from models import db, User, Spot, UserFavouriteSpot, AdminSettings, PushSubscription
+from models import db, User, Spot, UserFavouriteSpot, AdminSettings, PushSubscription, AppLog
 from extensions import bcrypt
 
 admin_bp = Blueprint('admin_bp', __name__)
@@ -267,3 +267,34 @@ def update_settings():
     db.session.commit()
     flash('Settings updated.', 'success')
     return redirect(url_for('admin_bp.users'))
+
+
+@admin_bp.route('/admin/logs')
+@login_required
+@admin_required
+def logs():
+    import os
+    from models import AppLog
+    from datetime import datetime, timedelta
+
+    # Filters
+    hours   = int(request.args.get('hours', 24))
+    actor   = request.args.get('actor', '').strip()
+    etype   = request.args.get('event_type', '').strip()
+    cutoff  = datetime.utcnow() - timedelta(hours=hours)
+
+    query = AppLog.query.filter(AppLog.timestamp >= cutoff)
+    if actor:
+        query = query.filter(AppLog.actor.ilike(f'%{actor}%'))
+    if etype:
+        query = query.filter(AppLog.event_type == etype)
+
+    entries      = query.order_by(AppLog.timestamp.desc()).limit(1000).all()
+    event_types  = [r[0] for r in db.session.query(AppLog.event_type).distinct().order_by(AppLog.event_type).all()]
+    retention    = int(os.environ.get('LOG_RETENTION_DAYS', 999))
+
+    return render_template('admin/logs.html',
+                           entries=entries, hours=hours,
+                           actor=actor, etype=etype,
+                           event_types=event_types,
+                           retention=retention)

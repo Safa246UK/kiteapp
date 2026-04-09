@@ -174,3 +174,15 @@ class AdminSettings(db.Model):
     max_active_spots = db.Column(db.Integer, default=2)
     default_min_tide_percent = db.Column(db.Float, default=0.0)
     default_max_tide_percent = db.Column(db.Float, default=90.0)
+
+
+class AppLog(db.Model):
+    """Audit log for user activity and system events."""
+    __tablename__ = 'app_log'
+    id         = db.Column(db.Integer, primary_key=True)
+    timestamp  = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    actor      = db.Column(db.String(150), nullable=False, index=True)  # user email or 'CRON'
+    event_type = db.Column(db.String(50),  nullable=False, index=True)
+    detail     = db.Column(db.Text,        nullable=True)
+    spot_id    = db.Column(db.Integer,     nullable=True)
+    user_id    = db.Column(db.Integer,     nullable=True)
