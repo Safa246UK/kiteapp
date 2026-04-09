@@ -115,9 +115,17 @@ def log_page_view():
         return
     if request.endpoint in _PAGE_VIEW_SKIP:
         return
+    import re
+    detail = request.path
+    # Resolve /admin/users/<id> to the user's email address
+    m = re.match(r'^/admin/users/(\d+)$', request.path)
+    if m:
+        u = User.query.get(int(m.group(1)))
+        if u:
+            detail = f'/admin/users/{u.email}'
     from log_utils import log_event
     log_event(current_user.email, 'page_view',
-              detail=request.path, user_id=current_user.id)
+              detail=detail, user_id=current_user.id)
 
 
 # Redirect first-time visitors to welcome BEFORE Flask-Login can flash "please log in"
