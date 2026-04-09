@@ -102,6 +102,9 @@ def add():
     except Exception as e:
         print(f"[Weather] Initial fetch failed for {spot.name}: {e}")
 
+    from log_utils import log_event
+    log_event(current_user.email, 'spot_created',
+              detail=f'{name} (tz: {spot_tz})', spot_id=spot.id, user_id=current_user.id)
     flash(f'Spot "{name}" created successfully!', 'success')
     return redirect(url_for('main.index'))
 
@@ -183,6 +186,10 @@ def toggle_favourite(spot_id):
     if existing:
         db.session.delete(existing)
         db.session.commit()
+        from log_utils import log_event
+        spot_name = Spot.query.get(spot_id).name if Spot.query.get(spot_id) else str(spot_id)
+        log_event(current_user.email, 'favourite_removed',
+                  detail=spot_name, spot_id=spot_id, user_id=current_user.id)
         flash('Spot removed from your favourites.', 'info')
     else:
         count = UserFavouriteSpot.query.filter_by(user_id=current_user.id).count()
@@ -192,6 +199,10 @@ def toggle_favourite(spot_id):
         else:
             db.session.add(UserFavouriteSpot(user_id=current_user.id, spot_id=spot_id))
             db.session.commit()
+            from log_utils import log_event
+            spot_name = Spot.query.get(spot_id).name if Spot.query.get(spot_id) else str(spot_id)
+            log_event(current_user.email, 'favourite_added',
+                      detail=spot_name, spot_id=spot_id, user_id=current_user.id)
             flash('Spot added to your favourites!', 'success')
     if next_page == 'detail':
         return redirect(url_for('spots.detail', spot_id=spot_id))
@@ -209,6 +220,10 @@ def toggle_active(spot_id):
     if fav.is_active:
         fav.is_active = False
         db.session.commit()
+        from log_utils import log_event
+        spot_name = fav.spot.name
+        log_event(current_user.email, 'alert_deactivated',
+                  detail=spot_name, spot_id=spot_id, user_id=current_user.id)
     else:
         active_count = UserFavouriteSpot.query.filter_by(user_id=current_user.id, is_active=True).count()
         max_active = settings.max_active_spots if settings else 2
@@ -217,6 +232,10 @@ def toggle_active(spot_id):
             return redirect(url_for('main.index'))
         fav.is_active = True
         db.session.commit()
+        from log_utils import log_event
+        spot_name = fav.spot.name
+        log_event(current_user.email, 'alert_activated',
+                  detail=spot_name, spot_id=spot_id, user_id=current_user.id)
     return redirect(url_for('main.index'))
 
 
@@ -227,6 +246,11 @@ def add_note(spot_id):
     if note_text:
         db.session.add(SpotNote(spot_id=spot_id, user_id=current_user.id, note=note_text))
         db.session.commit()
+        from log_utils import log_event
+        spot = Spot.query.get(spot_id)
+        log_event(current_user.email, 'note_added',
+                  detail=spot.name if spot else str(spot_id),
+                  spot_id=spot_id, user_id=current_user.id)
         flash('Note added.', 'success')
     return redirect(url_for('spots.detail', spot_id=spot_id))
 
@@ -235,13 +259,19 @@ def add_note(spot_id):
 @login_required
 def delete_note(note_id):
     note = SpotNote.query.get_or_404(note_id)
+    redirect_spot_id = note.spot_id
     if note.user_id == current_user.id or current_user.is_admin:
         db.session.delete(note)
         db.session.commit()
+        from log_utils import log_event
+        spot = Spot.query.get(redirect_spot_id)
+        log_event(current_user.email, 'note_deleted',
+                  detail=spot.name if spot else str(redirect_spot_id),
+                  spot_id=redirect_spot_id, user_id=current_user.id)
         flash('Note deleted.', 'info')
     else:
         flash('You do not have permission to delete this note.', 'danger')
-    return redirect(url_for('spots.detail', spot_id=note.spot_id))
+    return redirect(url_for('spots.detail', spot_id=redirect_spot_id))
 
 
 @spots.route('/spots/<int:spot_id>/edit', methods=['GET', 'POST'])
@@ -280,6 +310,9 @@ def edit(spot_id):
             spot.season_end_month   = None
             spot.season_end_day     = None
         db.session.commit()
+        from log_utils import log_event
+        log_event(current_user.email, 'spot_updated',
+                  detail=spot.name, spot_id=spot_id, user_id=current_user.id)
         flash(f'Spot "{spot.name}" updated.', 'success')
         return redirect(url_for('spots.detail', spot_id=spot_id))
     creator = User.query.get(spot.created_by)
@@ -297,6 +330,9 @@ def retire(spot_id):
     spot.retired_at = datetime.utcnow() if spot.is_retired else None
     db.session.commit()
     status = 'disabled' if spot.is_retired else 'enabled'
+    from log_utils import log_event
+    log_event(current_user.email, 'spot_retired' if spot.is_retired else 'spot_enabled',
+              detail=f'{spot.name} {status}', spot_id=spot_id, user_id=current_user.id)
     flash(f'Spot "{spot.name}" has been {status}.', 'success')
     return redirect(url_for('spots.manage'))
 

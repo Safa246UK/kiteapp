@@ -46,6 +46,10 @@ def user_detail(user_id):
     alert_favs = [f for f in favs if f.is_active]
     other_favs  = [f for f in favs if not f.is_active]
     push_subs   = PushSubscription.query.filter_by(user_id=user_id).order_by(PushSubscription.created_at.desc()).all()
+    if current_user.is_admin and current_user.id != user_id:
+        from log_utils import log_event
+        log_event(current_user.email, 'user_profile_viewed',
+                  detail=f'Viewed profile of {user.email}', user_id=user_id)
     return render_template('admin/user_detail.html',
                            user=user,
                            created_spots=created_spots,
@@ -78,6 +82,9 @@ def edit_user(user_id):
     if slots:
         user.available_slots = ','.join(slots)
     db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'user_profile_updated',
+              detail=f'Updated profile of {user.email}', user_id=user_id)
     flash('Profile updated.', 'success')
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
 
@@ -96,9 +103,14 @@ def send_whatsapp(user_id):
         return redirect(url_for('admin_bp.users'))
     from whatsapp import send_whatsapp as _send
     ok, result = _send(user.whatsapp_dial_code or '+44', user.whatsapp_number, message)
+    from log_utils import log_event
     if ok:
+        log_event(current_user.email, 'whatsapp_sent_admin',
+                  detail=f'Sent WhatsApp to {user.email}', user_id=user.id)
         flash(f'WhatsApp sent to {user.name} ✓', 'success')
     else:
+        log_event(current_user.email, 'whatsapp_failed_admin',
+                  detail=f'Failed to send WhatsApp to {user.email}: {result}', user_id=user.id)
         flash(f'Failed to send to {user.name}: {result}', 'danger')
     return redirect(url_for('admin_bp.users'))
 
@@ -135,6 +147,9 @@ def refresh_weather():
             except Exception as ae:
                 print(f"[Cron] Alert send failed: {ae}")
             return 'OK', 200
+        from log_utils import log_event
+        actor = current_user.email if current_user.is_authenticated else 'ADMIN'
+        log_event(actor, 'weather_refresh_manual', detail='Manual weather + tide refresh triggered')
         flash('✅ Weather and tide data refreshed for all spots.', 'success')
     except Exception as e:
         if from_cron:
@@ -161,6 +176,9 @@ def send_all_alerts():
         parts.append(f'{len(failed_list)} failed')
         for u, d in failed_list:
             flash(f'❌ {u.email}: {d}', 'danger')
+    from log_utils import log_event
+    log_event(current_user.email, 'alerts_sent_all',
+              detail=f'{len(sent_list)} sent, {len(skipped_list)} skipped, {len(failed_list)} failed')
     flash('Alerts: ' + ', '.join(parts) if parts else 'No users with alerts enabled.', 'info')
     return redirect(url_for('admin_bp.users'))
 
@@ -187,6 +205,9 @@ def toggle_role(user_id):
     user.is_admin = not user.is_admin
     db.session.commit()
     new_role = 'Admin' if user.is_admin else 'User'
+    from log_utils import log_event
+    log_event(current_user.email, 'user_role_changed',
+              detail=f'{user.email} is now {new_role}', user_id=user.id)
     flash(f'{user.name} is now a {new_role}.', 'success')
     return redirect(url_for('admin_bp.users'))
 
@@ -202,6 +223,9 @@ def toggle_user_active(user_id):
     user.is_active = not user.is_active
     db.session.commit()
     status = 'enabled' if user.is_active else 'disabled'
+    from log_utils import log_event
+    log_event(current_user.email, 'user_account_toggled',
+              detail=f'{user.email} account {status}', user_id=user_id)
     flash(f'Account for {user.email} has been {status}.', 'success')
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
 
@@ -221,6 +245,9 @@ def set_password(user_id):
         return redirect(url_for('admin_bp.user_detail', user_id=user_id))
     user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
     db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'user_password_reset_admin',
+              detail=f'Admin reset password for {user.email}', user_id=user_id)
     flash(f'Password updated for {user.email}.', 'success')
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
 
@@ -265,6 +292,9 @@ def update_settings():
     settings.default_min_tide_percent = float(request.form.get('default_min_tide_percent', 0.0))
     settings.default_max_tide_percent = float(request.form.get('default_max_tide_percent', 90.0))
     db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'settings_updated',
+              detail=f'max_favs={new_max_favs}, max_active={new_max_active}')
     flash('Settings updated.', 'success')
     return redirect(url_for('admin_bp.users'))
 

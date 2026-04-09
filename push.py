@@ -67,6 +67,10 @@ def subscribe():
     sub.auth    = auth
     db.session.commit()
 
+    from log_utils import log_event
+    log_event(current_user.email, 'push_subscribed',
+              detail='Push subscription saved', user_id=current_user.id)
+
     # Set a long-lived server cookie so the dashboard knows this device is
     # subscribed — avoids the JS race condition where Notification.permission
     # returns 'default' on cold app start before Chrome re-connects to FCM.
@@ -92,6 +96,9 @@ def unsubscribe():
             user_id=current_user.id, endpoint=endpoint
         ).delete()
         db.session.commit()
+        from log_utils import log_event
+        log_event(current_user.email, 'push_unsubscribed',
+                  detail='Push subscription removed', user_id=current_user.id)
     return jsonify({'status': 'ok'})
 
 

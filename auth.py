@@ -222,6 +222,8 @@ def resend_verification():
     try:
         send_verification_email(user)
         session['pending_verify_email'] = email
+        from log_utils import log_event
+        log_event(email, 'verification_resent', user_id=user.id)
         flash('Verification email resent — please check your inbox.', 'success')
     except Exception as e:
         print(f"[Email] Resend failed: {e}")
@@ -255,6 +257,8 @@ If you did not request this, you can safely ignore this email.
 """
             try:
                 _mail().send(msg)
+                from log_utils import log_event
+                log_event(email, 'password_reset_requested', user_id=user.id)
             except Exception:
                 flash('Could not send email. Please contact the admin.', 'danger')
                 return redirect(url_for('auth.forgot_password'))
