@@ -59,7 +59,8 @@ def subscribe():
         return jsonify({'error': 'Missing subscription fields'}), 400
 
     sub = PushSubscription.query.filter_by(endpoint=endpoint).first()
-    if not sub:
+    is_new = sub is None
+    if is_new:
         sub = PushSubscription(user_id=current_user.id, endpoint=endpoint)
         db.session.add(sub)
     sub.user_id = current_user.id
@@ -67,9 +68,10 @@ def subscribe():
     sub.auth    = auth
     db.session.commit()
 
-    from log_utils import log_event
-    log_event(current_user.email, 'push_subscribed',
-              detail='Push subscription saved', user_id=current_user.id)
+    if is_new:
+        from log_utils import log_event
+        log_event(current_user.email, 'push_subscribed',
+                  detail='New push subscription registered', user_id=current_user.id)
 
     # Set a long-lived server cookie so the dashboard knows this device is
     # subscribed — avoids the JS race condition where Notification.permission

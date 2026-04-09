@@ -135,21 +135,31 @@ def refresh_weather():
 
     from scheduler import refresh_all_weather, refresh_all_tides, refresh_all_summaries
     try:
-        refresh_all_weather()
-        refresh_all_tides()
+        w_ok, w_failed       = refresh_all_weather()
+        t_ok, t_skip, t_fail = refresh_all_tides()
         refresh_all_summaries()
         if from_cron:
             # Also send any due alerts (users for whom it is now ALERT_HOUR locally)
+            alert_sent = alert_skip = alert_fail = 0
             try:
                 from alerts import send_due_alerts
                 app_url = request.host_url.rstrip('/')
-                send_due_alerts(app_url)
+                results  = send_due_alerts(app_url)
+                alert_sent = sum(1 for _, ok, _ in results if ok)
+                alert_skip = sum(1 for _, ok, d in results if not ok and 'No qualifying' in d)
+                alert_fail = sum(1 for _, ok, d in results if not ok and 'No qualifying' not in d)
             except Exception as ae:
                 print(f"[Cron] Alert send failed: {ae}")
+            from log_utils import log_event
+            log_event('CRON', 'cron_completed',
+                      detail=(f"Weather: {w_ok} updated, {w_failed} failed | "
+                              f"Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed | "
+                              f"Alerts: {alert_sent} sent, {alert_skip} skipped, {alert_fail} failed"))
             return 'OK', 200
         from log_utils import log_event
         actor = current_user.email if current_user.is_authenticated else 'ADMIN'
-        log_event(actor, 'weather_refresh_manual', detail='Manual weather + tide refresh triggered')
+        log_event(actor, 'weather_refresh_manual',
+                  detail=f'Weather: {w_ok} updated, {w_failed} failed | Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed')
         flash('✅ Weather and tide data refreshed for all spots.', 'success')
     except Exception as e:
         if from_cron:
