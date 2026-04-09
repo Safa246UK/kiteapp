@@ -98,6 +98,28 @@ def welcome():
     return resp
 
 
+# Log every authenticated page view (GET requests only, excluding noise)
+_PAGE_VIEW_SKIP = {
+    None, 'static', 'sw', 'manifest',          # infrastructure
+    'push.vapid_public_key', 'spots.api_all',   # JSON APIs
+    'push.subscribe', 'push.unsubscribe',        # already specifically logged
+    'spots.detail',                              # already logged as spot_viewed
+    'admin_bp.logs',                             # don't log the log page itself
+}
+
+@app.before_request
+def log_page_view():
+    if request.method != 'GET':
+        return
+    if not current_user.is_authenticated:
+        return
+    if request.endpoint in _PAGE_VIEW_SKIP:
+        return
+    from log_utils import log_event
+    log_event(current_user.email, 'page_view',
+              detail=request.path, user_id=current_user.id)
+
+
 # Redirect first-time visitors to welcome BEFORE Flask-Login can flash "please log in"
 @app.before_request
 def redirect_first_time_visitors():
