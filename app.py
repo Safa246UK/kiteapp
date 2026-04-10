@@ -20,6 +20,10 @@ else:
     _db_url = f'sqlite:///{_db_path}'
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,   # test connections before use, discard stale ones
+    'pool_recycle': 280,     # recycle connections every 4.5 min (before Render's 5 min idle timeout)
+}
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-later')
 
 # Mail config
