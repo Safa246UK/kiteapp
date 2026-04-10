@@ -3,7 +3,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">📋 Activity Logs</h2>
-    <small class="text-muted">Retention: {{ retention }} days &nbsp;|&nbsp; Showing newest first, max 1,000 entries</small>
+    <div class="d-flex align-items-center gap-3">
+        <small class="text-muted">Retention: {{ retention }} days &nbsp;|&nbsp; Showing newest first, max 1,000 entries</small>
+        <a href="{{ url_for('admin_bp.logs_download') }}" class="btn btn-outline-secondary btn-sm">
+            ⬇ Download CSV
+        </a>
+    </div>
 </div>
 
 <!-- Filters -->

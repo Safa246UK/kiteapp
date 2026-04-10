@@ -338,3 +338,37 @@ def logs():
                            actor=actor, etype=etype,
                            event_types=event_types,
                            retention=retention)
+
+
+@admin_bp.route('/admin/logs/download')
+@login_required
+@admin_required
+def logs_download():
+    """Download all logs as a CSV file."""
+    import csv
+    import io
+    from datetime import datetime
+    from flask import Response
+    from models import AppLog
+
+    rows = AppLog.query.order_by(AppLog.timestamp.desc()).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Timestamp (UTC)', 'Actor', 'Event Type', 'Detail', 'Spot ID', 'User ID'])
+    for r in rows:
+        writer.writerow([
+            r.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            r.actor,
+            r.event_type,
+            r.detail or '',
+            r.spot_id or '',
+            r.user_id or '',
+        ])
+
+    filename = f"windchaser_logs_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.csv"
+    return Response(
+        buf.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
