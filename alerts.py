@@ -195,16 +195,21 @@ def send_alert_email(user, alerts, app_url=''):
                 rows += (f'<p style="margin:4px 0;">🪁 <strong>{a["spot"].name}</strong> — '
                          f'{" · ".join(parts)}</p>')
 
+        base_url = app_url.rstrip('/') if app_url else ''
+        icon_url = f'{base_url}/static/icon-192.png' if base_url else ''
+        icon_img = (f'<img src="{icon_url}" width="40" height="40" '
+                    f'style="vertical-align:middle;border-radius:10px;margin-right:10px;">'
+                    if icon_url else '')
         link = f'<p style="margin-top:20px;"><a href="{app_url}">Open WindChaser</a></p>' if app_url else ''
         html = f"""
 <div style="font-family:sans-serif;max-width:520px;">
-  <h2 style="color:#0d6efd;">🪁 WindChaser — conditions update</h2>
+  <h2 style="color:#0d6efd;">{icon_img}WindChaser — conditions update</h2>
   {rows}
   {link}
 </div>"""
 
         msg = MailMessage(
-            subject='🪁 WindChaser — good kiting conditions coming up!',
+            subject='WindChaser — good kiting conditions coming up!',
             recipients=[user.email],
             html=html,
         )
