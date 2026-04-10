@@ -31,20 +31,12 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-muted">Phone / WhatsApp</td>
-                        <td>
-                            {% if user.whatsapp_number %}
-                                {{ user.whatsapp_dial_code or '+44' }} {{ user.whatsapp_number }}
-                            {% else %}—{% endif %}
-                        </td>
-                    </tr>
-                    <tr>
                         <td class="text-muted">Alerts</td>
                         <td>
                             {% set nt = user.notification_type or 'push' %}
-                            {% if nt == 'push' %}<span class="badge bg-primary">🔔 Phone App</span>
-                            {% elif nt == 'whatsapp' %}<span class="badge bg-success">💬 WhatsApp</span>
-                            {% elif nt == 'both' %}<span class="badge bg-info">🔔💬 Both</span>
+                            {% if nt == 'push' %}<span class="badge bg-primary">🔔 App</span>
+                            {% elif nt == 'email' %}<span class="badge bg-success">📧 Email</span>
+                            {% elif nt == 'both' %}<span class="badge bg-info">🔔📧 App + Email</span>
                             {% else %}<span class="badge bg-secondary">🔕 None</span>
                             {% endif %}
                             <div class="mt-1 d-flex gap-1">
@@ -224,26 +216,6 @@
                                    value="{{ user.last_name }}" required>
                         </div>
                     </div>
-                    {% set dial_codes = [
-                        ('+44','🇬🇧 +44 United Kingdom'),
-                        ('+353','🇮🇪 +353 Ireland'),
-                        ('+1','🇺🇸 +1 USA / Canada'),
-                        ('+33','🇫🇷 +33 France'),
-                        ('+49','🇩🇪 +49 Germany'),
-                        ('+34','🇪🇸 +34 Spain'),
-                        ('+31','🇳🇱 +31 Netherlands'),
-                        ('+32','🇧🇪 +32 Belgium'),
-                        ('+41','🇨🇭 +41 Switzerland'),
-                        ('+43','🇦🇹 +43 Austria'),
-                        ('+61','🇦🇺 +61 Australia'),
-                        ('+64','🇳🇿 +64 New Zealand'),
-                        ('+27','🇿🇦 +27 South Africa'),
-                        ('+971','🇦🇪 +971 UAE'),
-                        ('+91','🇮🇳 +91 India'),
-                        ('+55','🇧🇷 +55 Brazil'),
-                        ('+52','🇲🇽 +52 Mexico'),
-                        ('+54','🇦🇷 +54 Argentina'),
-                    ] %}
                     {% set timezones = [
                         ('Pacific/Honolulu','UTC-10 — Hawaii'),
                         ('America/Los_Angeles','UTC-8/7 — US Pacific'),
@@ -264,38 +236,19 @@
                         ('Pacific/Auckland','UTC+12/13 — New Zealand'),
                     ] %}
                     <div class="mb-3">
-                        <label class="form-label">Phone / WhatsApp</label>
-                        <div class="d-flex gap-2">
-                            <select name="whatsapp_dial_code" class="form-select" style="width:auto;flex-shrink:0;">
-                                {% for code, label in dial_codes %}
-                                <option value="{{ code }}" {% if (user.whatsapp_dial_code or '+44') == code %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            <input type="text" name="whatsapp_number" class="form-control"
-                                   value="{{ user.whatsapp_number or '' }}"
-                                   placeholder="07700900000">
-                        </div>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Alert method</label>
                         <div class="d-flex gap-2 flex-wrap">
                             <input type="radio" class="btn-check" name="notification_type" id="notif_push_modal" value="push"
                                    {% if (user.notification_type or 'push') == 'push' %}checked{% endif %}>
-                            <label class="btn btn-outline-primary" for="notif_push_modal">🔔 Phone App</label>
+                            <label class="btn btn-outline-primary" for="notif_push_modal">🔔 App</label>
 
-                            <span tabindex="0" data-bs-toggle="tooltip"
-                                  title="WhatsApp notifications unavailable at present">
-                                <input type="radio" class="btn-check" name="notification_type" id="notif_wa_modal" value="whatsapp" disabled>
-                                <label class="btn btn-outline-secondary" for="notif_wa_modal"
-                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">💬 WhatsApp</label>
-                            </span>
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_email_modal" value="email"
+                                   {% if user.notification_type == 'email' %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="notif_email_modal">📧 Email</label>
 
-                            <span tabindex="0" data-bs-toggle="tooltip"
-                                  title="WhatsApp notifications unavailable at present">
-                                <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both" disabled>
-                                <label class="btn btn-outline-secondary" for="notif_both_modal"
-                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">🔔💬 Both</label>
-                            </span>
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_both_modal" value="both"
+                                   {% if user.notification_type == 'both' %}checked{% endif %}>
+                            <label class="btn btn-outline-primary" for="notif_both_modal">🔔📧 Both</label>
 
                             <input type="radio" class="btn-check" name="notification_type" id="notif_none_modal" value="none"
                                    {% if user.notification_type == 'none' %}checked{% endif %}>

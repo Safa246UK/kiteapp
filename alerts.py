@@ -159,6 +159,62 @@ def build_alert_message(alerts, app_url=''):
 
 
 # ---------------------------------------------------------------------------
+# Email alert sender
+# ---------------------------------------------------------------------------
+
+def send_alert_email(user, alerts, app_url=''):
+    """Send the conditions alert as an email. Returns (ok: bool, detail: str)."""
+    try:
+        from app import mail
+        from flask_mail import Message as MailMessage
+
+        days_seen, by_day = [], {}
+        for a in alerts:
+            lbl = a['day_label']
+            if lbl not in by_day:
+                days_seen.append(lbl)
+                by_day[lbl] = []
+            by_day[lbl].append(a)
+
+        # Build HTML body
+        rows = ''
+        for lbl in days_seen:
+            rows += f'<h3 style="margin:16px 0 6px;">{lbl}</h3>'
+            for a in by_day[lbl]:
+                hrs   = a['hours']
+                start = a.get('start_hour')
+                parts = []
+                if a['conditions']:
+                    parts.append(f"Wind: {a['conditions']}")
+                if start is not None:
+                    suffix = 'am' if start < 12 else 'pm'
+                    h12 = start if 1 <= start <= 12 else (start - 12 if start > 12 else 12)
+                    parts.append(f"{hrs} good hour{'s' if hrs != 1 else ''} from {h12}{suffix}")
+                else:
+                    parts.append(f"{hrs} good hour{'s' if hrs != 1 else ''}")
+                rows += (f'<p style="margin:4px 0;">🪁 <strong>{a["spot"].name}</strong> — '
+                         f'{" · ".join(parts)}</p>')
+
+        link = f'<p style="margin-top:20px;"><a href="{app_url}">Open WindChaser</a></p>' if app_url else ''
+        html = f"""
+<div style="font-family:sans-serif;max-width:520px;">
+  <h2 style="color:#0d6efd;">🪁 WindChaser — conditions update</h2>
+  {rows}
+  {link}
+</div>"""
+
+        msg = MailMessage(
+            subject='🪁 WindChaser — good kiting conditions coming up!',
+            recipients=[user.email],
+            html=html,
+        )
+        mail.send(msg)
+        return True, 'sent'
+    except Exception as e:
+        return False, str(e)
+
+
+# ---------------------------------------------------------------------------
 # Send for one user
 # ---------------------------------------------------------------------------
 
@@ -166,27 +222,20 @@ def send_alerts_for_user(user, app_url=''):
     """Compute and send alerts for one user via their chosen notification channel(s).
 
     Returns (sent: bool, detail: str).
+    'both' = push app notification + email.
     """
     ntype = user.notification_type or 'none'
     if ntype == 'none':
         return False, 'Notifications disabled'
 
     alerts  = get_alerts_for_user(user)
-    message = build_alert_message(alerts, app_url)
-    if not message:
+    if not alerts:
         return False, 'No qualifying conditions to report'
 
     results = []
 
-    if ntype in ('whatsapp', 'both'):
-        if user.whatsapp_number:
-            from whatsapp import send_whatsapp
-            ok, detail = send_whatsapp(user.whatsapp_dial_code or '+44', user.whatsapp_number, message)
-            results.append(f"WhatsApp: {'sent' if ok else detail}")
-        else:
-            results.append('WhatsApp: no number saved')
-
     if ntype in ('push', 'both'):
+        message = build_alert_message(alerts, app_url)
         from push import send_push_to_user
         ok, detail = send_push_to_user(
             user,
@@ -195,6 +244,10 @@ def send_alerts_for_user(user, app_url=''):
             app_url
         )
         results.append(f"Push: {'sent' if ok else detail}")
+
+    if ntype in ('email', 'both'):
+        ok, detail = send_alert_email(user, alerts, app_url)
+        results.append(f"Email: {'sent' if ok else detail}")
 
     sent = any('sent' in r for r in results)
     return sent, ' | '.join(results)

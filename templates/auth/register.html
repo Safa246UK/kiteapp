@@ -86,21 +86,13 @@
                         <label class="form-label">Alert method</label>
                         <div class="d-flex gap-2 flex-wrap">
                             <input type="radio" class="btn-check" name="notification_type" id="notif_push_reg" value="push">
-                            <label class="btn btn-outline-primary" for="notif_push_reg">🔔 Phone App</label>
+                            <label class="btn btn-outline-primary" for="notif_push_reg">🔔 App</label>
 
-                            <span tabindex="0" data-bs-toggle="tooltip"
-                                  title="WhatsApp notifications unavailable at present">
-                                <input type="radio" class="btn-check" name="notification_type" id="notif_wa_reg" value="whatsapp" disabled>
-                                <label class="btn btn-outline-secondary" for="notif_wa_reg"
-                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">💬 WhatsApp</label>
-                            </span>
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_email_reg" value="email">
+                            <label class="btn btn-outline-primary" for="notif_email_reg">📧 Email</label>
 
-                            <span tabindex="0" data-bs-toggle="tooltip"
-                                  title="WhatsApp notifications unavailable at present">
-                                <input type="radio" class="btn-check" name="notification_type" id="notif_both_reg" value="both" disabled>
-                                <label class="btn btn-outline-secondary" for="notif_both_reg"
-                                       style="pointer-events:none; opacity:0.45; cursor:not-allowed;">🔔💬 Both</label>
-                            </span>
+                            <input type="radio" class="btn-check" name="notification_type" id="notif_both_reg" value="both">
+                            <label class="btn btn-outline-primary" for="notif_both_reg">🔔📧 Both</label>
 
                             <input type="radio" class="btn-check" name="notification_type" id="notif_none_reg" value="none" checked>
                             <label class="btn btn-outline-secondary" for="notif_none_reg">🔕 None</label>
@@ -119,27 +111,6 @@
                             <label class="btn btn-outline-primary btn-sm" for="day_dayafter_reg">Day after</label>
                         </div>
                     </div>
-                    <p class="text-muted small mb-2">WhatsApp details — only needed if you selected WhatsApp or Both above:</p>
-                    {% set dial_codes = [
-                        ('+44','🇬🇧 +44 United Kingdom'),
-                        ('+353','🇮🇪 +353 Ireland'),
-                        ('+1','🇺🇸 +1 USA / Canada'),
-                        ('+33','🇫🇷 +33 France'),
-                        ('+49','🇩🇪 +49 Germany'),
-                        ('+34','🇪🇸 +34 Spain'),
-                        ('+31','🇳🇱 +31 Netherlands'),
-                        ('+32','🇧🇪 +32 Belgium'),
-                        ('+41','🇨🇭 +41 Switzerland'),
-                        ('+43','🇦🇹 +43 Austria'),
-                        ('+61','🇦🇺 +61 Australia'),
-                        ('+64','🇳🇿 +64 New Zealand'),
-                        ('+27','🇿🇦 +27 South Africa'),
-                        ('+971','🇦🇪 +971 UAE'),
-                        ('+91','🇮🇳 +91 India'),
-                        ('+55','🇧🇷 +55 Brazil'),
-                        ('+52','🇲🇽 +52 Mexico'),
-                        ('+54','🇦🇷 +54 Argentina'),
-                    ] %}
                     {% set timezones = [
                         ('Pacific/Honolulu','UTC-10 — Hawaii'),
                         ('America/Los_Angeles','UTC-8/7 — US Pacific'),
@@ -159,24 +130,6 @@
                         ('Australia/Sydney','UTC+10/11 — Australia East'),
                         ('Pacific/Auckland','UTC+12/13 — New Zealand'),
                     ] %}
-                    <div class="mb-2">
-                        <label class="form-label">Phone / WhatsApp</label>
-                        <div class="d-flex gap-2">
-                            <select name="whatsapp_dial_code" class="form-select" style="width:auto;flex-shrink:0;">
-                                {% for code, label in dial_codes %}
-                                <option value="{{ code }}" {% if code == '+44' %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            <input type="text" name="whatsapp_number" class="form-control" placeholder="07700900000">
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
-                                   id="wa_enabled_reg" role="switch">
-                            <label class="form-check-label" for="wa_enabled_reg">Enable WhatsApp alerts?</label>
-                        </div>
-                    </div>
                     <div class="mb-3">
                         <label class="form-label">Time Zone</label>
                         <select name="timezone" class="form-select">
