@@ -48,6 +48,15 @@ class User(db.Model, UserMixin):
     available_days  = db.Column(db.String(50), default='mon,tue,wed,thu,fri,sat,sun')
     available_times = db.Column(db.String(50), default='morning,afternoon,evening')
 
+    # Billing
+    subscription_status    = db.Column(db.String(20), default='trial')
+    # Values: 'trial' | 'active' | 'unpaid' | 'cancelled'
+    first_billing_date     = db.Column(db.Date, nullable=True)
+    next_billing_date      = db.Column(db.Date, nullable=True)
+    cancellation_requested = db.Column(db.Boolean, default=False)
+    is_free_for_life       = db.Column(db.Boolean, default=False)
+    stripe_customer_id     = db.Column(db.String(50), nullable=True)
+
     # Relationships
     favourite_spots = db.relationship('UserFavouriteSpot', backref='user', lazy=True)
     notes = db.relationship('SpotNote', backref='author', lazy=True)
@@ -174,6 +183,7 @@ class AdminSettings(db.Model):
     max_active_spots = db.Column(db.Integer, default=2)
     default_min_tide_percent = db.Column(db.Float, default=0.0)
     default_max_tide_percent = db.Column(db.Float, default=90.0)
+    billing_enabled = db.Column(db.Boolean, default=False)
 
 
 class AppLog(db.Model):

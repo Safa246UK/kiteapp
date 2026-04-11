@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-body p-5 text-center">
+                <img src="/static/icon-192.png" width="64" height="64"
+                     style="border-radius:12px;margin-bottom:1.5rem;" alt="WindChaser">
+                <h3 class="mb-3">Account Suspended</h3>
+                <p class="text-muted">
+                    Your WindChaser account has been suspended as we were unable to
+                    process your <strong>£3.00</strong> monthly payment.
+                </p>
+                <p class="text-muted mb-4">
+                    Click below to re-enter your payment details and get back on
+                    the water immediately.
+                </p>
+
+                <a href="{{ url_for('billing.reactivate') }}"
+                   class="btn btn-primary btn-lg mb-3 w-100">
+                    Reactivate my account — £3.00/month
+                </a>
+
+                <p class="text-muted small mt-3">
+                    Or email us at
+                    <a href="mailto:windchaser@hamptons.me.uk">windchaser@hamptons.me.uk</a>
+                    if you have any questions.
+                </p>
+
+                <hr class="my-4">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm">
+                    Log out
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

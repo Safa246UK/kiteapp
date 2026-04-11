@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-5 text-center">
+                <img src="/static/icon-192.png" width="64" height="64"
+                     style="border-radius:12px;margin-bottom:1.5rem;" alt="WindChaser">
+                <h3 class="mb-3">No problem!</h3>
+                <p class="text-muted">
+                    You cancelled out of the payment page — no charge was made and
+                    nothing has changed on your account.
+                </p>
+                <p class="text-muted">
+                    You can add your payment details any time from your profile,
+                    or just wait for your next reminder email.
+                </p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary mt-3">
+                    Back to WindChaser
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -134,37 +134,82 @@ def refresh_weather():
             abort(403)
 
     from scheduler import refresh_all_weather, refresh_all_tides, refresh_all_summaries
+    from log_utils import log_event
+    from datetime import datetime, timezone
+
+    if from_cron:
+        now_utc = datetime.now(timezone.utc)
+        log_event('CRON', 'cron_started',
+                  detail=f"Hourly cron started at {now_utc.strftime('%Y-%m-%d %H:%M')} UTC")
+
+    w_ok = w_failed = 0
+    t_ok = t_skip = t_fail = 0
+    alert_sent = alert_skip = alert_fail = 0
+    errors = []
+
     try:
-        w_ok, w_failed       = refresh_all_weather()
-        t_ok, t_skip, t_fail = refresh_all_tides()
-        refresh_all_summaries()
+        try:
+            w_ok, w_failed = refresh_all_weather()
+        except Exception as e:
+            errors.append(f"Weather phase failed: {e}")
+            print(f"[Cron] Weather phase failed: {e}")
+
+        try:
+            t_ok, t_skip, t_fail = refresh_all_tides()
+        except Exception as e:
+            errors.append(f"Tides phase failed: {e}")
+            print(f"[Cron] Tides phase failed: {e}")
+
+        try:
+            refresh_all_summaries()
+        except Exception as e:
+            errors.append(f"Summaries phase failed: {e}")
+            print(f"[Cron] Summaries phase failed: {e}")
+
         if from_cron:
-            # Also send any due alerts (users for whom it is now ALERT_HOUR locally)
-            alert_sent = alert_skip = alert_fail = 0
             try:
                 from alerts import send_due_alerts
                 app_url = request.host_url.rstrip('/')
-                results  = send_due_alerts(app_url)
+                results = send_due_alerts(app_url)
                 alert_sent = sum(1 for _, ok, _ in results if ok)
                 alert_skip = sum(1 for _, ok, d in results if not ok and 'No qualifying' in d)
                 alert_fail = sum(1 for _, ok, d in results if not ok and 'No qualifying' not in d)
             except Exception as ae:
-                print(f"[Cron] Alert send failed: {ae}")
-            from log_utils import log_event
-            log_event('CRON', 'cron_completed',
-                      detail=(f"Weather: {w_ok} updated, {w_failed} failed | "
-                              f"Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed | "
-                              f"Alerts: {alert_sent} sent, {alert_skip} skipped, {alert_fail} failed"))
-            return 'OK', 200
-        from log_utils import log_event
-        actor = current_user.email if current_user.is_authenticated else 'ADMIN'
-        log_event(actor, 'weather_refresh_manual',
-                  detail=f'Weather: {w_ok} updated, {w_failed} failed | Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed')
-        flash('✅ Weather and tide data refreshed for all spots.', 'success')
-    except Exception as e:
+                errors.append(f"Alerts phase failed: {ae}")
+                print(f"[Cron] Alerts phase failed: {ae}")
+
         if from_cron:
-            return f'Error: {e}', 500
-        flash(f'❌ Refresh failed: {e}', 'danger')
+            try:
+                settings = AdminSettings.query.first()
+                if settings and settings.billing_enabled:
+                    from billing_emails import run_billing_cron
+                    from datetime import date as _date
+                    billing_results = run_billing_cron(_date.today(), app_url)
+                    if billing_results:
+                        log_event('CRON', 'billing_cron_ran',
+                                  detail=(f"Warnings sent: {billing_results['warnings_sent']}, "
+                                          f"failed: {billing_results['warnings_failed']}, "
+                                          f"suspended: {billing_results['suspended']}"))
+            except Exception as be:
+                errors.append(f"Billing phase failed: {be}")
+                print(f"[Cron] Billing phase failed: {be}")
+
+        if not from_cron:
+            actor = current_user.email if current_user.is_authenticated else 'ADMIN'
+            log_event(actor, 'weather_refresh_manual',
+                      detail=f'Weather: {w_ok} updated, {w_failed} failed | Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed')
+            flash('✅ Weather and tide data refreshed for all spots.', 'success')
+    finally:
+        if from_cron:
+            detail = (f"Weather: {w_ok} updated, {w_failed} failed | "
+                      f"Tides: {t_ok} updated, {t_skip} skipped, {t_fail} failed | "
+                      f"Alerts: {alert_sent} sent, {alert_skip} skipped, {alert_fail} failed")
+            if errors:
+                detail += " | ERRORS: " + "; ".join(errors)
+            log_event('CRON', 'cron_completed', detail=detail)
+
+    if from_cron:
+        return 'OK', 200
     return redirect(url_for('spots.manage'))
 
 
@@ -297,14 +342,16 @@ def update_settings():
         flash('Max alert-me spots cannot exceed max favourite spots.', 'danger')
         return redirect(url_for('admin_bp.users'))
 
-    settings.max_favourite_spots     = new_max_favs
-    settings.max_active_spots        = new_max_active
+    billing_enabled = 'billing_enabled' in request.form
+    settings.max_favourite_spots      = new_max_favs
+    settings.max_active_spots         = new_max_active
     settings.default_min_tide_percent = float(request.form.get('default_min_tide_percent', 0.0))
     settings.default_max_tide_percent = float(request.form.get('default_max_tide_percent', 90.0))
+    settings.billing_enabled          = billing_enabled
     db.session.commit()
     from log_utils import log_event
     log_event(current_user.email, 'settings_updated',
-              detail=f'max_favs={new_max_favs}, max_active={new_max_active}')
+              detail=f'max_favs={new_max_favs}, max_active={new_max_active}, billing_enabled={billing_enabled}')
     flash('Settings updated.', 'success')
     return redirect(url_for('admin_bp.users'))
 
@@ -372,3 +419,66 @@ def logs_download():
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
+
+
+# ---------------------------------------------------------------------------
+# Billing admin actions
+# ---------------------------------------------------------------------------
+
+@admin_bp.route('/admin/users/<int:user_id>/toggle-free-for-life', methods=['POST'])
+@login_required
+@admin_required
+def toggle_free_for_life(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_free_for_life = not user.is_free_for_life
+    db.session.commit()
+    from log_utils import log_event
+    state = 'granted' if user.is_free_for_life else 'revoked'
+    log_event(current_user.email, 'billing_free_for_life',
+              detail=f'{user.email} — free-for-life {state}', user_id=user.id)
+    flash(f'Free-for-life {state} for {user.name}.', 'success')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/admin/users/<int:user_id>/send-payment-email', methods=['POST'])
+@login_required
+@admin_required
+def send_payment_email(user_id):
+    user = User.query.get_or_404(user_id)
+    from billing_emails import send_trial_ending_warning, send_payment_failed_email
+    app_url = request.host_url.rstrip('/')
+    if user.subscription_status in ('trial',):
+        ok, detail = send_trial_ending_warning(user, app_url)
+    else:
+        ok, detail = send_payment_failed_email(user, app_url)
+    from log_utils import log_event
+    if ok:
+        log_event(current_user.email, 'billing_payment_email_sent',
+                  detail=f'Sent payment email to {user.email}', user_id=user.id)
+        flash(f'Payment email sent to {user.email}.', 'success')
+    else:
+        flash(f'Failed to send email: {detail}', 'danger')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/admin/users/<int:user_id>/reinstate', methods=['POST'])
+@login_required
+@admin_required
+def reinstate_user(user_id):
+    from billing import advance_billing_date
+    from datetime import date
+    user = User.query.get_or_404(user_id)
+    user.subscription_status    = 'active'
+    user.cancellation_requested = False
+    # Set next billing date to the next 25th
+    today = date.today()
+    next_25 = date(today.year, today.month, 25)
+    if today.day >= 25:
+        next_25 = advance_billing_date(next_25)
+    user.next_billing_date = next_25
+    db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'billing_reinstated',
+              detail=f'{user.email} reinstated manually by admin', user_id=user.id)
+    flash(f'{user.name} reinstated. Next billing date: {next_25.strftime("%d %b %Y")}.', 'success')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))

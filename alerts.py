@@ -286,10 +286,7 @@ def send_due_alerts(app_url=''):
     the same local time regardless of where in the world they are.
     Returns list of (user, sent, detail) tuples.
     """
-    from log_utils import log_event
     now_utc = datetime.now(timezone.utc)
-
-    log_event('CRON', 'cron_started', detail=f"Hourly cron started at {now_utc.strftime('%Y-%m-%d %H:%M')} UTC")
 
     users = User.query.filter(
         User.is_active == True,

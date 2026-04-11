@@ -4,24 +4,42 @@ scheduler = BackgroundScheduler(timezone='Europe/London')
 
 
 def refresh_all_weather():
-    """Fetch and cache weather for every active spot. Returns (ok, failed) counts."""
+    """Fetch and cache weather for every active spot. Returns (ok, failed) counts.
+
+    Uses ThreadPoolExecutor so spots are fetched in parallel (up to 10 at a time).
+    Each thread gets its own Flask app context so SQLAlchemy sessions are thread-safe.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from app import app
     from models import Spot
     from weather import fetch_and_cache_weather
     from log_utils import log_event
 
-    ok, failed = 0, 0
+    # Collect spot data inside a single context, then release it before spawning threads
     with app.app_context():
-        spots = Spot.query.filter_by(is_retired=False).all()
-        for spot in spots:
+        spot_data = [(s.id, s.name) for s in Spot.query.filter_by(is_retired=False).all()]
+
+    def fetch_one(spot_id, spot_name):
+        with app.app_context():
             try:
+                spot = Spot.query.get(spot_id)
                 fetch_and_cache_weather(spot)
-                print(f"[Weather] Updated: {spot.name}")
-                log_event('CRON', 'weather_fetch', detail=f"{spot.name} — success", spot_id=spot.id)
-                ok += 1
+                log_event('CRON', 'weather_fetch', detail=f"{spot_name} — success", spot_id=spot_id)
+                print(f"[Weather] Updated: {spot_name}")
+                return True, spot_name, None
             except Exception as e:
-                print(f"[Weather] Failed for {spot.name}: {e}")
-                log_event('CRON', 'weather_fetch', detail=f"{spot.name} — FAILED: {e}", spot_id=spot.id)
+                log_event('CRON', 'weather_fetch', detail=f"{spot_name} — FAILED: {e}", spot_id=spot_id)
+                print(f"[Weather] Failed for {spot_name}: {e}")
+                return False, spot_name, str(e)
+
+    ok, failed = 0, 0
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(fetch_one, sid, name): name for sid, name in spot_data}
+        for future in as_completed(futures):
+            success, _, _ = future.result()
+            if success:
+                ok += 1
+            else:
                 failed += 1
     return ok, failed
 

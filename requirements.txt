@@ -46,3 +46,4 @@ Werkzeug==3.1.7
 WTForms==3.2.1
 yarl==1.23.0
 timezonefinder
+stripe

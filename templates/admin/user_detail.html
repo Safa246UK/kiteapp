@@ -93,6 +93,79 @@
             </div>
         </div>
 
+        <!-- Billing -->
+        {% if current_user.is_admin %}
+        <div class="card mb-4">
+            <div class="card-header"><strong>💳 Billing</strong></div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td class="text-muted">Status</td>
+                        <td>
+                            {% if user.is_free_for_life %}
+                                <span class="badge bg-success">Free for life</span>
+                            {% elif user.subscription_status == 'trial' %}
+                                <span class="badge bg-info text-dark">
+                                    Trial
+                                    {% if user.first_billing_date %}
+                                        (ends {{ user.first_billing_date.strftime('%d %b %Y') }})
+                                    {% endif %}
+                                </span>
+                            {% elif user.subscription_status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif user.subscription_status == 'unpaid' %}
+                                <span class="badge bg-warning text-dark">Unpaid</span>
+                            {% elif user.subscription_status == 'cancelled' %}
+                                <span class="badge bg-danger">Suspended</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ user.subscription_status }}</span>
+                            {% endif %}
+                            {% if user.cancellation_requested %}
+                                <span class="badge bg-secondary ms-1">Cancellation pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if user.next_billing_date %}
+                    <tr>
+                        <td class="text-muted">Next billing</td>
+                        <td>{{ user.next_billing_date.strftime('%d %b %Y') }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if user.stripe_customer_id %}
+                    <tr>
+                        <td class="text-muted">Stripe ID</td>
+                        <td><code class="small">{{ user.stripe_customer_id }}</code></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            <div class="card-footer d-flex gap-2 flex-wrap">
+                <!-- Free for life toggle -->
+                <form method="POST"
+                      action="{{ url_for('admin_bp.toggle_free_for_life', user_id=user.id) }}"
+                      onsubmit="return confirm('{% if user.is_free_for_life %}Remove free-for-life status?{% else %}Grant free-for-life status?{% endif %}')">
+                    <button class="btn btn-sm {% if user.is_free_for_life %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                        {% if user.is_free_for_life %}Remove free-for-life{% else %}Grant free-for-life{% endif %}
+                    </button>
+                </form>
+                <!-- Send payment email -->
+                <form method="POST"
+                      action="{{ url_for('admin_bp.send_payment_email', user_id=user.id) }}"
+                      onsubmit="return confirm('Send payment link email to {{ user.email }}?')">
+                    <button class="btn btn-sm btn-outline-primary">📧 Send payment email</button>
+                </form>
+                <!-- Reinstate suspended account -->
+                {% if user.subscription_status == 'cancelled' %}
+                <form method="POST"
+                      action="{{ url_for('admin_bp.reinstate_user', user_id=user.id) }}"
+                      onsubmit="return confirm('Reinstate {{ user.email }}? This sets them to active immediately.')">
+                    <button class="btn btn-sm btn-success">✅ Reinstate account</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Change Password -->
         <div class="card mb-4">
             <div class="card-header"><strong>🔑 Change Password</strong></div>

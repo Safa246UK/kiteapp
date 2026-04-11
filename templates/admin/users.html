@@ -45,6 +45,16 @@
             <div class="col-md-2">
                 <button class="btn btn-primary w-100">Save Settings</button>
             </div>
+            <div class="col-12 mt-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="billing_enabled"
+                           id="billingSwitch" {% if settings.billing_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="billingSwitch">
+                        <strong>Billing enabled</strong>
+                        <span class="text-muted small ms-1">— enforces subscription status; turn off to disable all payment gates instantly</span>
+                    </label>
+                </div>
+            </div>
         </form>
     </div>
 </div>
@@ -56,8 +66,8 @@
             <tr>
                 <th>Email</th>
                 <th>Name</th>
-                <th>Phone / WhatsApp</th>
                 <th>Alerts</th>
+                <th>Billing</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th></th>
@@ -76,11 +86,6 @@
                 </td>
                 <td>{{ user.name }}</td>
                 <td>
-                    {% if user.whatsapp_number %}
-                        {{ user.whatsapp_dial_code or '+44' }} {{ user.whatsapp_number }}
-                    {% else %}—{% endif %}
-                </td>
-                <td>
                     {% set nt = user.notification_type or 'push' %}
                     {% if nt == 'none' %}
                         <span class="badge bg-secondary">🔕 Off</span>
@@ -94,6 +99,23 @@
                             <span class="badge {% if user.whatsapp_tomorrow %}bg-success{% else %}bg-secondary{% endif %}">Tom</span>
                             <span class="badge {% if user.whatsapp_day_after %}bg-success{% else %}bg-secondary{% endif %}">+2</span>
                         </div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.is_free_for_life %}
+                        <span class="badge bg-success">Free for life</span>
+                    {% elif user.subscription_status == 'trial' %}
+                        <span class="badge bg-info text-dark">
+                            Trial{% if user.first_billing_date %} → {{ user.first_billing_date.strftime('%d %b') }}{% endif %}
+                        </span>
+                    {% elif user.subscription_status == 'active' %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif user.subscription_status == 'unpaid' %}
+                        <span class="badge bg-warning text-dark">Unpaid</span>
+                    {% elif user.subscription_status == 'cancelled' %}
+                        <span class="badge bg-danger">Suspended</span>
+                    {% else %}
+                        <span class="badge bg-secondary">—</span>
                     {% endif %}
                 </td>
                 <td>
@@ -121,13 +143,7 @@
                 </td>
                 <td style="white-space:nowrap;">
                     <a href="{{ url_for('admin_bp.user_detail', user_id=user.id) }}"
-                       class="btn btn-sm btn-outline-primary me-1">View</a>
-                    {% if user.whatsapp_number %}
-                    <button class="btn btn-sm btn-outline-success"
-                            onclick="openWaModal({{ user.id }}, '{{ user.name|e }}', '{{ (user.whatsapp_dial_code or '+44')|e }} {{ user.whatsapp_number|e }}')">
-                        💬 WhatsApp
-                    </button>
-                    {% endif %}
+                       class="btn btn-sm btn-outline-primary">View</a>
                 </td>
             </tr>
             {% else %}

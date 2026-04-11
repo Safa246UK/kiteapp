@@ -21,6 +21,15 @@
     </div>
 </div>
 
+{% if current_user.cancellation_requested %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+    <span>⚠️ Your subscription is cancelled. You keep full access until the 1st of next month.</span>
+    <form method="POST" action="{{ url_for('billing.revert_cancel') }}" class="ms-3">
+        <button type="submit" class="btn btn-sm btn-warning">Undo cancellation</button>
+    </form>
+</div>
+{% endif %}
+
 {% if not active_favs and not other_favs %}
 <div class="alert alert-info">
     You have no favourite spots yet.

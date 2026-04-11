@@ -40,23 +40,34 @@ mail = Mail(app)
 
 def run_migrations():
     """Add any missing columns to existing tables (safe to run on every startup)."""
-    # Only needed for PostgreSQL — SQLite handles this via create_all
-    if 'postgresql' not in str(db.engine.url):
-        return
     migrations = [
         ("user", "notification_type", "VARCHAR(10) DEFAULT 'push'"),
         ("user", "available_slots",   "TEXT"),
         ("push_subscription", "created_at", "TIMESTAMP"),
-        ("user", "email_verified",    "BOOLEAN DEFAULT TRUE"),  # existing users pre-verified
-        ("spot", "timezone",          "VARCHAR(60)"),
+        ("user", "email_verified",       "BOOLEAN DEFAULT TRUE"),  # existing users pre-verified
+        ("spot", "timezone",             "VARCHAR(60)"),
+        # Billing
+        ("user", "subscription_status",    "VARCHAR(20) DEFAULT 'trial'"),
+        ("user", "first_billing_date",     "DATE"),
+        ("user", "next_billing_date",      "DATE"),
+        ("user", "cancellation_requested", "BOOLEAN DEFAULT FALSE"),
+        ("user", "is_free_for_life",       "BOOLEAN DEFAULT FALSE"),
+        ("user", "stripe_customer_id",     "VARCHAR(50)"),
+        ("admin_settings", "billing_enabled", "BOOLEAN DEFAULT FALSE"),
     ]
+    is_postgres = 'postgresql' in str(db.engine.url)
     with db.engine.connect() as conn:
         for table, column, col_type in migrations:
-            # Check if column already exists before trying to add it
-            exists = conn.execute(db.text(
-                "SELECT 1 FROM information_schema.columns "
-                "WHERE table_name=:t AND column_name=:c"
-            ), {"t": table, "c": column}).fetchone()
+            # Check if column already exists (syntax differs between DBs)
+            if is_postgres:
+                exists = conn.execute(db.text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_name=:t AND column_name=:c"
+                ), {"t": table, "c": column}).fetchone()
+            else:
+                # SQLite: use PRAGMA table_info
+                rows = conn.execute(db.text(f'PRAGMA table_info("{table}")')).fetchall()
+                exists = any(row[1] == column for row in rows)
             if not exists:
                 try:
                     conn.execute(db.text(
@@ -68,11 +79,11 @@ def run_migrations():
 
 with app.app_context():
     db.create_all()
+    run_migrations()  # add missing columns before any queries touch the schema
     from models import AdminSettings
     if not AdminSettings.query.first():
         db.session.add(AdminSettings())
         db.session.commit()
-    run_migrations()
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
@@ -87,12 +98,61 @@ from main import main
 from spots import spots
 from admin import admin_bp
 from push import push_bp
+from billing_routes import billing_bp
 
 app.register_blueprint(auth)
 app.register_blueprint(main)
 app.register_blueprint(spots)
 app.register_blueprint(admin_bp)
 app.register_blueprint(push_bp)
+app.register_blueprint(billing_bp)
+
+# ---------------------------------------------------------------------------
+# Billing gate — runs on every authenticated request
+# ---------------------------------------------------------------------------
+
+_BILLING_SKIP = {
+    None, 'static', 'sw', 'manifest', 'welcome',
+    'auth.login', 'auth.logout', 'auth.register',
+    'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification',
+    'auth.forgot_password', 'auth.reset_password',
+    'billing.suspended', 'billing.cancel_confirm', 'billing.cancel_confirm_post',
+    'billing.revert_cancel',
+    'billing.add_payment', 'billing.reactivate',
+    'billing.checkout_success', 'billing.checkout_cancel',
+    'billing.stripe_webhook',
+}
+
+@app.before_request
+def billing_gate():
+    if not current_user.is_authenticated:
+        return
+    if request.endpoint in _BILLING_SKIP:
+        return
+    if current_user.is_admin:
+        return  # admins always get through
+    settings = AdminSettings.query.first()
+    if not settings or not settings.billing_enabled:
+        return
+    from billing import is_access_allowed
+    if not is_access_allowed(current_user, billing_enabled=True):
+        if current_user.subscription_status == 'cancelled':
+            return redirect(url_for('billing.suspended'))
+        # 'unpaid' — let them in but the red banner will show (via context processor)
+
+
+@app.context_processor
+def billing_context():
+    """Inject billing_unpaid flag into all templates."""
+    if not current_user.is_authenticated or current_user.is_admin:
+        return {}
+    settings = AdminSettings.query.first()
+    if not settings or not settings.billing_enabled:
+        return {}
+    if current_user.subscription_status == 'unpaid':
+        return {'billing_unpaid': True}
+    return {}
+
 
 # Welcome / splash page — shown automatically on first visit, also linked as Help
 @app.route('/welcome')

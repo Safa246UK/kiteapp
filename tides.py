@@ -53,6 +53,12 @@ def fetch_and_cache_tides(spot, api_key):
     """Fetch tidal events for the nearest station and cache them."""
     cache = TideCache.query.filter_by(spot_id=spot.id).first()
 
+    # Already confirmed no nearby station — don't hammer the Admiralty API again
+    if (cache and not cache.station_id and cache.station_distance_km
+            and cache.station_distance_km > MAX_STATION_DISTANCE_KM):
+        print(f"[Tides] {spot.name}: known distant spot ({cache.station_distance_km:.0f}km) — skipping API call")
+        return
+
     # Only re-find the station if we don't have one yet
     if cache and cache.station_id:
         station_id   = cache.station_id

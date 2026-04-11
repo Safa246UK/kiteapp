@@ -18,6 +18,13 @@
                     The link is valid for <strong>24 hours</strong>.
                 </p>
 
+                {% if session.get('trial_end_date') %}
+                <div class="alert alert-success text-start py-2 px-3 mb-3" style="font-size:0.9rem;">
+                    🎉 <strong>Your free trial runs until {{ session['trial_end_date'] }}.</strong>
+                    No payment is required until then.
+                </div>
+                {% endif %}
+
                 <div class="alert alert-info text-start py-2 px-3 mb-4" style="font-size:0.9rem;">
                     💡 <strong>Tip:</strong> Check your spam or junk folder if the email doesn't arrive within a couple of minutes.
                 </div>

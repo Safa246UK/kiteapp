@@ -138,6 +138,12 @@ def register():
 
         hashed = bcrypt.generate_password_hash(password).decode('utf-8')
         is_first_user = User.query.count() == 0
+
+        from datetime import date
+        from billing import calculate_first_billing_date
+        today = date.today()
+        first_billing_date = calculate_first_billing_date(today)
+
         user = User(email=email, first_name=first_name, last_name=last_name,
                     password=hashed, is_admin=is_first_user,
                     email_verified=is_first_user,  # auto-verify the first (admin) user
@@ -150,13 +156,24 @@ def register():
                     whatsapp_tomorrow=whatsapp_tomorrow,
                     whatsapp_day_after=whatsapp_day_after,
                     timezone=timezone,
-                    notification_type=notification_type)
+                    notification_type=notification_type,
+                    subscription_status='trial' if not is_first_user else 'active',
+                    first_billing_date=first_billing_date if not is_first_user else None,
+                    is_free_for_life=is_first_user)
         db.session.add(user)
 
         if is_first_user and not AdminSettings.query.first():
             db.session.add(AdminSettings())
 
         db.session.commit()
+
+        # Create a Stripe customer record (silently — non-fatal if Stripe is unavailable)
+        if not is_first_user:
+            try:
+                from billing_stripe import create_stripe_customer
+                create_stripe_customer(user)
+            except Exception as e:
+                print(f"[Stripe] Customer creation failed for {email}: {e}")
 
         if is_first_user:
             from log_utils import log_event
@@ -175,6 +192,9 @@ def register():
         from log_utils import log_event
         log_event(email, 'register', detail='Verification email sent', user_id=user.id)
         session['pending_verify_email'] = email
+        if not is_first_user:
+            from billing_emails import _format_date
+            session['trial_end_date'] = _format_date(first_billing_date)
         return redirect(url_for('auth.verify_pending'))
     return render_template('auth/register.html')
 
