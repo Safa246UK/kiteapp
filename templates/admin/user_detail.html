@@ -148,12 +148,14 @@
                         {% if user.is_free_for_life %}Remove free-for-life{% else %}Grant free-for-life{% endif %}
                     </button>
                 </form>
-                <!-- Send payment email -->
+                <!-- Send payment email — only relevant for trial/unpaid users -->
+                {% if not user.is_free_for_life and user.subscription_status in ('trial', 'unpaid') %}
                 <form method="POST"
                       action="{{ url_for('admin_bp.send_payment_email', user_id=user.id) }}"
                       onsubmit="return confirm('Send payment link email to {{ user.email }}?')">
                     <button class="btn btn-sm btn-outline-primary">📧 Send payment email</button>
                 </form>
+                {% endif %}
                 <!-- Reinstate suspended account -->
                 {% if user.subscription_status == 'cancelled' %}
                 <form method="POST"
