@@ -65,8 +65,8 @@ def send_trial_ending_warning(user, app_url=''):
   <p>Hi {user.first_name},</p>
   <p>We hope you've been enjoying WindChaser!</p>
   <p>As mentioned when you signed up, WindChaser is a paid service at
-     <strong>£3.00/month</strong> — less than a cup of coffee. We promise it will never
-     cost more than that, will never include advertising, and your card details are
+     <strong>£3.00/month</strong>. We promise it will never cost more than a cup of coffee
+     at our local coffee shop, will never include advertising. Also, your card details are
      handled securely by Stripe, not us.</p>
   <p>Your free trial ends on <strong>{_format_date(billing_date)}</strong>.
      Please add your payment details below — you won't be charged until the 25th.</p>
