@@ -47,6 +47,8 @@ def send_trial_ending_warning(user, app_url=''):
 
     Returns (ok: bool, detail: str).
     """
+    if not user.first_billing_date:
+        return False, 'user has no first_billing_date set'
     try:
         from flask_mail import Message
         base_url     = app_url.rstrip('/')
