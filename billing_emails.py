@@ -99,6 +99,8 @@ def send_renewal_warning(user, app_url=''):
 
     Returns (ok: bool, detail: str).
     """
+    if not user.next_billing_date:
+        return False, 'user has no next_billing_date set'
     try:
         from flask_mail import Message
         base_url     = app_url.rstrip('/')

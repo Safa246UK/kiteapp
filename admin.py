@@ -446,6 +446,15 @@ def toggle_free_for_life(user_id):
 def send_payment_email(user_id):
     user = User.query.get_or_404(user_id)
     from billing_emails import send_trial_ending_warning, send_payment_failed_email
+    from models import db
+
+    # Auto-fill missing billing dates for users created before billing was deployed
+    if not user.first_billing_date and not user.is_free_for_life:
+        from datetime import date
+        from billing import calculate_first_billing_date
+        user.first_billing_date = calculate_first_billing_date(date.today())
+        db.session.commit()
+
     app_url = request.host_url.rstrip('/')
     if user.subscription_status in ('trial',):
         ok, detail = send_trial_ending_warning(user, app_url)
