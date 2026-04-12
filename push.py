@@ -142,10 +142,13 @@ def send_push_to_user(user, title, body, url='/'):
             )
             sent += 1
         except WebPushException as e:
-            if e.response is not None and e.response.status_code == 410:
-                # Subscription has expired — clean it up
+            status = e.response.status_code if e.response is not None else None
+            if status in (401, 410):
+                # 410 Gone: subscription expired
+                # 401 Unauthorized: VAPID key mismatch — subscription is permanently invalid
                 db.session.delete(sub)
                 db.session.commit()
+                log.info('Push subscription removed for user %s (HTTP %s)', user.id, status)
             else:
                 errors.append(str(e))
                 log.warning('Push failed for user %s: %s', user.id, e)

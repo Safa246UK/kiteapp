@@ -6,7 +6,7 @@ scheduler = BackgroundScheduler(timezone='Europe/London')
 def refresh_all_weather():
     """Fetch and cache weather for every active spot. Returns (ok, failed) counts.
 
-    Uses ThreadPoolExecutor so spots are fetched in parallel (up to 3 at a time).
+    Uses ThreadPoolExecutor so spots are fetched in parallel (up to 2 at a time).
     Each thread gets its own Flask app context so SQLAlchemy sessions are thread-safe.
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -33,7 +33,7 @@ def refresh_all_weather():
                 return False, spot_name, str(e)
 
     ok, failed = 0, 0
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {executor.submit(fetch_one, sid, name): name for sid, name in spot_data}
         for future in as_completed(futures):
             success, _, _ = future.result()

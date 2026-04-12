@@ -13,6 +13,7 @@ For each user with whatsapp_enabled=True:
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from models import db, User, UserFavouriteSpot, WeatherCache, TideCache
+from log_utils import log_event, purge_old_logs
 
 ALERT_HOUR = 7   # Local hour at which each user receives their daily alert
 from weather import (_parse_weather_cache, _tide_irrelevant,
@@ -324,7 +325,6 @@ def send_due_alerts(app_url=''):
                       user_id=user.id)
             results.append((user, False, str(e)))
 
-    from log_utils import purge_old_logs
     purge_old_logs()
 
     return results
