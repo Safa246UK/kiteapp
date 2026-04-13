@@ -111,6 +111,7 @@ def create_setup_checkout_url(user, success_url, cancel_url):
     session = _s().checkout.Session.create(
         customer=user.stripe_customer_id,
         mode='setup',
+        currency='gbp',
         success_url=success_url + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=cancel_url,
         metadata={'user_id': str(user.id), 'purpose': 'setup'},
