@@ -62,6 +62,26 @@ def create_stripe_customer(user):
     return customer.id
 
 
+def _ensure_customer(user):
+    """Make sure the user has a valid Stripe customer, creating one if needed.
+
+    Also handles the case where the customer was deleted from Stripe —
+    clears the stale ID and creates a fresh one.
+    """
+    from models import db
+    if not user.stripe_customer_id:
+        create_stripe_customer(user)
+        return
+    # Verify the customer still exists in Stripe
+    try:
+        _s().Customer.retrieve(user.stripe_customer_id)
+    except stripe.error.InvalidRequestError:
+        # Customer was deleted from Stripe — create a fresh one
+        user.stripe_customer_id = None
+        db.session.commit()
+        create_stripe_customer(user)
+
+
 def set_default_payment_method(stripe_customer_id, payment_method_id):
     """Attach a payment method to a customer and set it as the default."""
     _s().PaymentMethod.attach(payment_method_id, customer=stripe_customer_id)
@@ -86,8 +106,7 @@ def create_setup_checkout_url(user, success_url, cancel_url):
 
     Used when a trial user clicks 'Add payment details'.
     """
-    if not user.stripe_customer_id:
-        create_stripe_customer(user)
+    _ensure_customer(user)
 
     session = _s().checkout.Session.create(
         customer=user.stripe_customer_id,
@@ -104,8 +123,7 @@ def create_payment_checkout_url(user, success_url, cancel_url):
 
     Used for reactivation — the catch-up payment for the current month.
     """
-    if not user.stripe_customer_id:
-        create_stripe_customer(user)
+    _ensure_customer(user)
 
     session = _s().checkout.Session.create(
         customer=user.stripe_customer_id,
