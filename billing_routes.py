@@ -76,7 +76,10 @@ def add_payment():
         checkout_url = create_setup_checkout_url(current_user, success_url, cancel_url)
         return redirect(checkout_url)
     except Exception as e:
-        current_app.logger.error(f'Stripe setup checkout error: {e}')
+        import traceback
+        current_app.logger.error(f'Stripe setup checkout error: {e}\n{traceback.format_exc()}')
+        from log_utils import log_event
+        log_event('STRIPE', 'checkout_error', detail=f'setup — {e}', user_id=current_user.id)
         flash('Sorry, we could not connect to the payment provider. Please try again later.', 'danger')
         return redirect(url_for('main.index'))
 
