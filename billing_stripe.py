@@ -159,12 +159,19 @@ def handle_webhook_event(payload, sig_header):
     etype = event['type']
     obj   = event['data']['object']
 
-    if etype == 'checkout.session.completed':
-        _on_checkout_completed(obj)
-    elif etype == 'payment_intent.succeeded':
-        _on_payment_succeeded(obj)
-    elif etype == 'payment_intent.payment_failed':
-        _on_payment_failed(obj)
+    try:
+        if etype == 'checkout.session.completed':
+            _on_checkout_completed(obj)
+        elif etype == 'payment_intent.succeeded':
+            _on_payment_succeeded(obj)
+        elif etype == 'payment_intent.payment_failed':
+            _on_payment_failed(obj)
+    except Exception as e:
+        import traceback
+        from log_utils import log_event
+        log_event('STRIPE', 'webhook_handler_error',
+                  detail=f'{etype} — {e}\n{traceback.format_exc()}')
+        return False, f'Handler error: {e}'
 
     return True, etype
 
