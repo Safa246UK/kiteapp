@@ -156,6 +156,14 @@
                     <button class="btn btn-sm btn-outline-primary">📧 Send payment email</button>
                 </form>
                 {% endif %}
+                <!-- Reset Stripe customer ID -->
+                {% if user.stripe_customer_id %}
+                <form method="POST"
+                      action="{{ url_for('admin_bp.reset_stripe_customer', user_id=user.id) }}"
+                      onsubmit="return confirm('Clear Stripe customer ID for {{ user.email }}? A new one will be created on next checkout.')">
+                    <button class="btn btn-sm btn-outline-danger">⚠️ Reset Stripe ID</button>
+                </form>
+                {% endif %}
                 <!-- Reinstate suspended account -->
                 {% if user.subscription_status == 'cancelled' %}
                 <form method="POST"

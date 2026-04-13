@@ -491,3 +491,19 @@ def reinstate_user(user_id):
               detail=f'{user.email} reinstated manually by admin', user_id=user.id)
     flash(f'{user.name} reinstated. Next billing date: {next_25.strftime("%d %b %Y")}.', 'success')
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/admin/users/<int:user_id>/reset-stripe', methods=['POST'])
+@login_required
+@admin_required
+def reset_stripe_customer(user_id):
+    """Clear the stored Stripe customer ID so a fresh one is created on next checkout."""
+    user = User.query.get_or_404(user_id)
+    old_id = user.stripe_customer_id
+    user.stripe_customer_id = None
+    db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'stripe_id_reset',
+              detail=f'{user.email} — cleared {old_id}', user_id=user.id)
+    flash(f'Stripe customer ID cleared for {user.name}. A new one will be created on next checkout.', 'success')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))
