@@ -143,14 +143,33 @@ def billing_gate():
 
 @app.context_processor
 def billing_context():
-    """Inject billing_unpaid flag into all templates."""
+    """Inject billing state flags into all templates."""
     if not current_user.is_authenticated or current_user.is_admin:
         return {}
     settings = AdminSettings.query.first()
     if not settings or not settings.billing_enabled:
         return {}
+
     if current_user.subscription_status == 'unpaid':
         return {'billing_unpaid': True}
+
+    if current_user.cancellation_requested:
+        # Work out when access actually ends (1st of month after billing date)
+        from datetime import date
+        billing_date = current_user.next_billing_date or current_user.first_billing_date
+        if billing_date:
+            end_month = billing_date.month + 1
+            end_year  = billing_date.year
+            if end_month > 12:
+                end_month = 1
+                end_year += 1
+            end_date = date(end_year, end_month, 1)
+            from billing_emails import _format_date
+            return {
+                'billing_cancelling': True,
+                'billing_cancel_date': _format_date(end_date),
+            }
+
     return {}
 
 

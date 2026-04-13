@@ -56,6 +56,17 @@
         Your account will be suspended on the 1st.
         <a href="/billing/add-payment" class="text-white fw-bold ms-2">Update payment details →</a>
     </div>
+    {% elif billing_cancelling %}
+    <div class="bg-warning text-dark text-center py-2 px-3" style="font-size:0.9rem;">
+        ⚠️ Your access ends <strong>{{ billing_cancel_date }}</strong>.
+        <form method="POST" action="{{ url_for('billing.revert_cancel') }}"
+              style="display:inline;"
+              onsubmit="return confirm('Keep your WindChaser subscription?')">
+            <button type="submit" class="btn btn-sm btn-dark ms-2 py-0">
+                Keep my subscription →
+            </button>
+        </form>
+    </div>
     {% endif %}
     {% block full_width %}{% endblock %}
     <div class="container mt-4">

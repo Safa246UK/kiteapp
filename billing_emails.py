@@ -84,8 +84,8 @@ def send_trial_ending_warning(user, app_url=''):
     </a>
   </p>
   <p style="color:#666;font-size:13px;">
-    If you decide WindChaser isn't for you, simply ignore this email and your account
-    will be disabled on <strong>{suspend_date}</strong>.
+    If you decide WindChaser isn't for you, simply ignore this email and your access
+    will end on <strong>{suspend_date}</strong>.
   </p>"""
 
         msg = Message(
@@ -270,11 +270,12 @@ def run_billing_cron(today: date, app_url: str = '') -> dict | None:
                 db.session.commit()
                 send_payment_failed_email(user, app_url)
 
-    # Day 1 — suspend unpaid users
+    # Day 1 — suspend unpaid and cancelled users whose period has ended
     if today.day == 1:
         to_suspend = get_users_due_suspension(users, today)
         for user in to_suspend:
-            user.subscription_status = 'cancelled'
+            user.subscription_status    = 'cancelled'
+            user.cancellation_requested = False  # tidy up — no longer needed
             db.session.commit()
             log_event('CRON', 'billing_suspended',
                       detail=f'{user.email}', user_id=user.id)

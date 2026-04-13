@@ -110,7 +110,12 @@ def get_users_due_suspension(users, today: date):
 
     Two groups:
       - subscription_status='unpaid'  (payment failed or no card on file)
-      - cancellation_requested=True   (user cancelled, grace period has expired)
+      - cancellation_requested=True AND their billing date has already passed
+        (i.e. we're on the 1st AFTER their last paid period ended)
+
+    Important: a user who cancels mid-month should keep access until the 1st
+    AFTER their billing date. For example, an active user with next_billing_date
+    = 25 May who cancels on 5 April should have access until 1 June, not 1 May.
     """
     due = []
     for user in users:
@@ -119,7 +124,11 @@ def get_users_due_suspension(users, today: date):
         if user.subscription_status == 'unpaid':
             due.append(user)
         elif user.cancellation_requested and user.subscription_status in ('trial', 'active'):
-            due.append(user)
+            billing_date = user.next_billing_date or user.first_billing_date
+            # Only suspend if their billing date is in the past
+            # (today is the 1st, billing_date is the 25th of the previous month or earlier)
+            if billing_date and billing_date < today:
+                due.append(user)
     return due
 
 
