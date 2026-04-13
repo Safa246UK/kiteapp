@@ -181,24 +181,27 @@ def _on_checkout_completed(session):
     from models import db, User
     from log_utils import log_event
 
-    user_id = int(session.get('metadata', {}).get('user_id', 0))
-    purpose = session.get('metadata', {}).get('purpose', '')
+    metadata = session.metadata or {}
+    user_id  = int(metadata.get('user_id', 0))
+    purpose  = metadata.get('purpose', '')
+    mode     = session.mode
+
     user = User.query.get(user_id)
     if not user:
         return
 
-    if session.get('mode') == 'setup':
+    if mode == 'setup':
         # Card saved — attach as default payment method so we can charge on the 25th
-        setup_intent_id = session.get('setup_intent')
+        setup_intent_id = session.setup_intent
         if setup_intent_id:
-            si = _s().SetupIntent.retrieve(setup_intent_id)
-            pm_id = si.get('payment_method')
+            si    = _s().SetupIntent.retrieve(setup_intent_id)
+            pm_id = si.payment_method
             if pm_id and user.stripe_customer_id:
                 set_default_payment_method(user.stripe_customer_id, pm_id)
                 log_event('STRIPE', 'card_saved',
                           detail=f'{user.email} saved card via Checkout', user_id=user.id)
 
-    elif session.get('mode') == 'payment' and purpose == 'reactivation':
+    elif mode == 'payment' and purpose == 'reactivation':
         # Reactivation payment succeeded — reinstate account
         from billing import advance_billing_date
         from datetime import date
@@ -220,7 +223,8 @@ def _on_payment_succeeded(intent):
     from billing import advance_billing_date
     from log_utils import log_event
 
-    user_id = int(intent.get('metadata', {}).get('user_id', 0))
+    metadata = intent.metadata or {}
+    user_id  = int(metadata.get('user_id', 0))
     user = User.query.get(user_id)
     if not user:
         return
@@ -243,7 +247,8 @@ def _on_payment_failed(intent):
     from models import db, User
     from log_utils import log_event
 
-    user_id = int(intent.get('metadata', {}).get('user_id', 0))
+    metadata = intent.metadata or {}
+    user_id  = int(metadata.get('user_id', 0))
     user = User.query.get(user_id)
     if not user:
         return
