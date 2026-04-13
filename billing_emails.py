@@ -17,11 +17,21 @@ def _mail():
     return mail
 
 
-def _icon_img(base_url):
-    if not base_url:
-        return ''
-    return (f'<img src="{base_url}/static/icon-192.png" width="40" height="40" '
-            f'style="vertical-align:middle;border-radius:10px;margin-right:10px;">')
+def _email_wrap(content: str) -> str:
+    """Wrap email content in a full HTML document to prevent iOS date/phone auto-detection."""
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="-webkit-text-size-adjust:100%;margin:0;padding:0;background:#f8f9fa;">
+<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#ffffff;">
+{content}
+</div>
+</body>
+</html>"""
 
 
 def _format_date(d: date) -> str:
@@ -54,39 +64,34 @@ def send_trial_ending_warning(user, app_url=''):
         base_url     = app_url.rstrip('/')
         billing_date = user.first_billing_date
         suspend_date = _suspension_date(billing_date)
-        icon         = _icon_img(base_url)
-
-        # Payment link will be a Stripe Checkout URL once Stripe is integrated
         payment_url  = f'{base_url}/billing/add-payment' if base_url else '#'
 
-        html = f"""
-<div style="font-family:sans-serif;max-width:520px;">
-  <h2 style="color:#0d6efd;">{icon}WindChaser</h2>
-  <p>Hi {user.first_name},</p>
-  <p>We hope you've been enjoying WindChaser!</p>
-  <p>As mentioned when you signed up, WindChaser is a paid service at
+        body = f"""
+  <h2 style="color:#0d6efd;font-size:20px;margin:0 0 16px;">🪁 WindChaser</h2>
+  <p style="font-size:14px;">Hi {user.first_name},</p>
+  <p style="font-size:14px;">We hope you've been enjoying WindChaser!</p>
+  <p style="font-size:14px;">As mentioned when you signed up, WindChaser is a paid service at
      <strong>£3.00/month</strong>. We promise it will never cost more than a cup of coffee
      at our local coffee shop, will never include advertising. Also, your card details are
      handled securely by Stripe, not us.</p>
-  <p>Your free trial ends on <strong>{_format_date(billing_date)}</strong>.
-     Please add your payment details below — you won't be charged until the 25th.</p>
+  <p style="font-size:14px;">Your free trial ends on <strong>{_format_date(billing_date)}</strong>.
+     Please add your payment details below &mdash; you won't be charged until the 25th.</p>
   <p style="text-align:center;margin:2em 0;">
     <a href="{payment_url}"
        style="background:#0d6efd;color:white;padding:12px 28px;border-radius:6px;
-              text-decoration:none;font-weight:bold;font-size:1rem;">
+              text-decoration:none;font-weight:bold;font-size:14px;">
       Add payment details
     </a>
   </p>
-  <p style="color:#666;font-size:0.9rem;">
+  <p style="color:#666;font-size:13px;">
     If you decide WindChaser isn't for you, simply ignore this email and your account
     will be disabled on <strong>{suspend_date}</strong>.
-  </p>
-</div>"""
+  </p>"""
 
         msg = Message(
             subject=f'Your WindChaser free trial ends {_format_date(billing_date)}',
             recipients=[user.email],
-            html=html,
+            html=_email_wrap(body),
         )
         _mail().send(msg)
         return True, 'sent'
@@ -106,34 +111,31 @@ def send_renewal_warning(user, app_url=''):
         base_url     = app_url.rstrip('/')
         billing_date = user.next_billing_date
         suspend_date = _suspension_date(billing_date)
-        icon         = _icon_img(base_url)
         cancel_url   = f'{base_url}/billing/cancel' if base_url else '#'
 
-        html = f"""
-<div style="font-family:sans-serif;max-width:520px;">
-  <h2 style="color:#0d6efd;">{icon}WindChaser</h2>
-  <p>Hi {user.first_name},</p>
-  <p>Another month of WindChaser is coming up on <strong>{_format_date(billing_date)}</strong>
-     — <strong>£3.00</strong> will be taken from your card on file.</p>
-  <p>If for any reason you no longer feel WindChaser is worth the price of a cup of coffee
-     a month, we completely understand. Click below and we'll cancel your subscription —
+        body = f"""
+  <h2 style="color:#0d6efd;font-size:20px;margin:0 0 16px;">🪁 WindChaser</h2>
+  <p style="font-size:14px;">Hi {user.first_name},</p>
+  <p style="font-size:14px;">Another month of WindChaser is coming up on <strong>{_format_date(billing_date)}</strong>
+     &mdash; <strong>£3.00</strong> will be taken from your card on file.</p>
+  <p style="font-size:14px;">If for any reason you no longer feel WindChaser is worth the price of a cup of coffee
+     a month, we completely understand. Click below and we'll cancel your subscription &mdash;
      you'll keep access until <strong>{suspend_date}</strong> and can come back any time.</p>
   <p style="text-align:center;margin:2em 0;">
     <a href="{cancel_url}"
        style="background:#6c757d;color:white;padding:12px 28px;border-radius:6px;
-              text-decoration:none;font-weight:bold;font-size:1rem;">
-      😊 Cancel my membership
+              text-decoration:none;font-weight:bold;font-size:14px;">
+      Cancel my membership
     </a>
   </p>
-  <p style="color:#666;font-size:0.9rem;">
-    Otherwise, do nothing — we'll take care of everything on the 25th.
-  </p>
-</div>"""
+  <p style="color:#666;font-size:13px;">
+    Otherwise, do nothing &mdash; we'll take care of everything on the 25th.
+  </p>"""
 
         msg = Message(
             subject='WindChaser renewal — £3.00 on ' + _format_date(billing_date),
             recipients=[user.email],
-            html=html,
+            html=_email_wrap(body),
         )
         _mail().send(msg)
         return True, 'sent'
@@ -151,35 +153,32 @@ def send_payment_failed_email(user, app_url=''):
         base_url     = app_url.rstrip('/')
         billing_date = user.next_billing_date or user.first_billing_date
         suspend_date = _suspension_date(billing_date) if billing_date else 'the 1st'
-        icon         = _icon_img(base_url)
         payment_url  = f'{base_url}/billing/add-payment' if base_url else '#'
 
-        html = f"""
-<div style="font-family:sans-serif;max-width:520px;">
-  <h2 style="color:#dc3545;">{icon}WindChaser — payment problem</h2>
-  <p>Hi {user.first_name},</p>
-  <p>Unfortunately we were unable to take your <strong>£3.00</strong> payment for WindChaser.
-     This can happen for a number of reasons — expired card, insufficient funds, etc.</p>
-  <p>Please click below to update your payment details and your account will be
+        body = f"""
+  <h2 style="color:#dc3545;font-size:20px;margin:0 0 16px;">🪁 WindChaser &mdash; payment problem</h2>
+  <p style="font-size:14px;">Hi {user.first_name},</p>
+  <p style="font-size:14px;">Unfortunately we were unable to take your <strong>£3.00</strong> payment for WindChaser.
+     This can happen for a number of reasons &mdash; expired card, insufficient funds, etc.</p>
+  <p style="font-size:14px;">Please click below to update your payment details and your account will be
      reinstated immediately.</p>
   <p style="text-align:center;margin:2em 0;">
     <a href="{payment_url}"
        style="background:#dc3545;color:white;padding:12px 28px;border-radius:6px;
-              text-decoration:none;font-weight:bold;font-size:1rem;">
+              text-decoration:none;font-weight:bold;font-size:14px;">
       Update payment details
     </a>
   </p>
-  <p style="color:#666;font-size:0.9rem;">
+  <p style="color:#666;font-size:13px;">
     If we don't hear from you by <strong>{suspend_date}</strong>, your account will be
     suspended. You can come back at any time by emailing
-    <a href="mailto:windchaser@hamptons.me.uk">windchaser@hamptons.me.uk</a>.
-  </p>
-</div>"""
+    <a href="mailto:admin@windchaser.info">admin@windchaser.info</a>.
+  </p>"""
 
         msg = Message(
             subject='WindChaser — payment unsuccessful',
             recipients=[user.email],
-            html=html,
+            html=_email_wrap(body),
         )
         _mail().send(msg)
         return True, 'sent'

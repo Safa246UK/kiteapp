@@ -180,7 +180,8 @@ def send_alert_email(user, alerts, app_url=''):
         # Build HTML body
         rows = ''
         for lbl in days_seen:
-            rows += f'<h3 style="margin:16px 0 6px;">{lbl}</h3>'
+            rows += (f'<h3 style="margin:16px 0 6px;font-size:16px;font-weight:bold;'
+                     f'color:#212529;">{lbl}</h3>')
             for a in by_day[lbl]:
                 hrs   = a['hours']
                 start = a.get('start_hour')
@@ -193,21 +194,26 @@ def send_alert_email(user, alerts, app_url=''):
                     parts.append(f"{hrs} good hour{'s' if hrs != 1 else ''} from {h12}{suffix}")
                 else:
                     parts.append(f"{hrs} good hour{'s' if hrs != 1 else ''}")
-                rows += (f'<p style="margin:4px 0;">🪁 <strong>{a["spot"].name}</strong> — '
-                         f'{" · ".join(parts)}</p>')
+                rows += (f'<p style="margin:4px 0;font-size:14px;">🪁 <strong>{a["spot"].name}</strong> &mdash; '
+                         f'{" &middot; ".join(parts)}</p>')
 
-        base_url = app_url.rstrip('/') if app_url else ''
-        icon_url = f'{base_url}/static/icon-192.png' if base_url else ''
-        icon_img = (f'<img src="{icon_url}" width="40" height="40" '
-                    f'style="vertical-align:middle;border-radius:10px;margin-right:10px;">'
-                    if icon_url else '')
-        link = f'<p style="margin-top:20px;"><a href="{app_url}">Open WindChaser</a></p>' if app_url else ''
-        html = f"""
-<div style="font-family:sans-serif;max-width:520px;">
-  <h2 style="color:#0d6efd;">{icon_img}WindChaser — conditions update</h2>
+        link = (f'<p style="margin-top:20px;font-size:14px;">'
+                f'<a href="{app_url}" style="color:#0d6efd;">Open WindChaser</a></p>') if app_url else ''
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="-webkit-text-size-adjust:100%;margin:0;padding:0;background:#f8f9fa;">
+<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#ffffff;">
+  <h2 style="color:#0d6efd;font-size:20px;margin:0 0 16px;">🪁 WindChaser &mdash; conditions update</h2>
   {rows}
   {link}
-</div>"""
+</div>
+</body>
+</html>"""
 
         msg = MailMessage(
             subject='WindChaser — good kiting conditions coming up!',

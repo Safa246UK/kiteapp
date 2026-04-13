@@ -186,7 +186,7 @@ def register():
             send_verification_email(user)
         except Exception as e:
             print(f"[Email] Verification send failed: {e}")
-            flash('Account created but we could not send the verification email. Please contact windchaser@hamptons.me.uk.', 'warning')
+            flash('Account created but we could not send the verification email. Please contact admin@windchaser.info.', 'warning')
             return redirect(url_for('auth.login'))
 
         from log_utils import log_event
@@ -247,7 +247,7 @@ def resend_verification():
         flash('Verification email resent — please check your inbox.', 'success')
     except Exception as e:
         print(f"[Email] Resend failed: {e}")
-        flash('Could not send the email. Please try again or contact windchaser@hamptons.me.uk.', 'danger')
+        flash('Could not send the email. Please try again or contact admin@windchaser.info.', 'danger')
     return redirect(url_for('auth.verify_pending'))
 
 
