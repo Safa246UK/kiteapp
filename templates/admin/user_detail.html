@@ -164,12 +164,18 @@
                     <button class="btn btn-sm btn-outline-danger">⚠️ Reset Stripe ID</button>
                 </form>
                 {% endif %}
-                <!-- Reinstate suspended account -->
+                <!-- Suspend / reinstate account -->
                 {% if user.subscription_status == 'cancelled' %}
                 <form method="POST"
                       action="{{ url_for('admin_bp.reinstate_user', user_id=user.id) }}"
                       onsubmit="return confirm('Reinstate {{ user.email }}? This sets them to active immediately.')">
                     <button class="btn btn-sm btn-success">✅ Reinstate account</button>
+                </form>
+                {% elif not user.is_free_for_life %}
+                <form method="POST"
+                      action="{{ url_for('admin_bp.suspend_user', user_id=user.id) }}"
+                      onsubmit="return confirm('Suspend {{ user.email }}? They will be redirected to the suspended screen.')">
+                    <button class="btn btn-sm btn-outline-danger">🚫 Suspend account</button>
                 </form>
                 {% endif %}
             </div>

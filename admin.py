@@ -493,6 +493,21 @@ def reinstate_user(user_id):
     return redirect(url_for('admin_bp.user_detail', user_id=user_id))
 
 
+@admin_bp.route('/admin/users/<int:user_id>/suspend', methods=['POST'])
+@login_required
+@admin_required
+def suspend_user(user_id):
+    """Manually suspend a user — sets subscription_status to cancelled."""
+    user = User.query.get_or_404(user_id)
+    user.subscription_status = 'cancelled'
+    db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'billing_suspended_manual',
+              detail=f'{user.email} suspended manually by admin', user_id=user.id)
+    flash(f'{user.name} has been suspended.', 'warning')
+    return redirect(url_for('admin_bp.user_detail', user_id=user_id))
+
+
 @admin_bp.route('/admin/users/<int:user_id>/reset-stripe', methods=['POST'])
 @login_required
 @admin_required
