@@ -156,8 +156,8 @@ def handle_webhook_event(payload, sig_header):
     except Exception as e:
         return False, str(e)
 
-    etype = event['type']
-    obj   = event['data']['object']
+    etype = event.type
+    obj   = event.data.object
 
     try:
         if etype == 'checkout.session.completed':
@@ -181,7 +181,7 @@ def _on_checkout_completed(session):
     from models import db, User
     from log_utils import log_event
 
-    metadata = session.metadata or {}
+    metadata = dict(session.metadata) if session.metadata else {}
     user_id  = int(metadata.get('user_id', 0))
     purpose  = metadata.get('purpose', '')
     mode     = session.mode
@@ -223,7 +223,7 @@ def _on_payment_succeeded(intent):
     from billing import advance_billing_date
     from log_utils import log_event
 
-    metadata = intent.metadata or {}
+    metadata = dict(intent.metadata) if intent.metadata else {}
     user_id  = int(metadata.get('user_id', 0))
     user = User.query.get(user_id)
     if not user:
@@ -247,7 +247,7 @@ def _on_payment_failed(intent):
     from models import db, User
     from log_utils import log_event
 
-    metadata = intent.metadata or {}
+    metadata = dict(intent.metadata) if intent.metadata else {}
     user_id  = int(metadata.get('user_id', 0))
     user = User.query.get(user_id)
     if not user:
