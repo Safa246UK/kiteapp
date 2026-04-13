@@ -83,7 +83,8 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and bcrypt.check_password_hash(user.password, password):
             if not user.is_active:
-                flash('Your account has been disabled. Please contact the admin.', 'danger')
+                flash('Your account has been disabled. Please contact us at '
+                      'admin@windchaser.info to get your account reinstated.', 'danger')
                 return redirect(url_for('auth.login'))
             if not user.email_verified:
                 session['pending_verify_email'] = user.email
