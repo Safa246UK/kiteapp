@@ -18,6 +18,22 @@ def _s():
     return stripe
 
 
+def _meta_int(stripe_obj, key, default=0):
+    """Safely read an integer from a Stripe object's metadata."""
+    try:
+        return int(stripe_obj.metadata[key])
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return default
+
+
+def _meta_str(stripe_obj, key, default=''):
+    """Safely read a string from a Stripe object's metadata."""
+    try:
+        return str(stripe_obj.metadata[key])
+    except (KeyError, TypeError, AttributeError):
+        return default
+
+
 def _price_id():
     return os.environ.get('STRIPE_PRICE_ID', '')
 
@@ -181,10 +197,9 @@ def _on_checkout_completed(session):
     from models import db, User
     from log_utils import log_event
 
-    metadata = dict(session.metadata) if session.metadata else {}
-    user_id  = int(metadata.get('user_id', 0))
-    purpose  = metadata.get('purpose', '')
-    mode     = session.mode
+    user_id = _meta_int(session, 'user_id')
+    purpose = _meta_str(session, 'purpose')
+    mode    = session.mode
 
     user = User.query.get(user_id)
     if not user:
@@ -223,8 +238,7 @@ def _on_payment_succeeded(intent):
     from billing import advance_billing_date
     from log_utils import log_event
 
-    metadata = dict(intent.metadata) if intent.metadata else {}
-    user_id  = int(metadata.get('user_id', 0))
+    user_id = _meta_int(intent, 'user_id')
     user = User.query.get(user_id)
     if not user:
         return
@@ -247,8 +261,7 @@ def _on_payment_failed(intent):
     from models import db, User
     from log_utils import log_event
 
-    metadata = dict(intent.metadata) if intent.metadata else {}
-    user_id  = int(metadata.get('user_id', 0))
+    user_id = _meta_int(intent, 'user_id')
     user = User.query.get(user_id)
     if not user:
         return
