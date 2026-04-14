@@ -42,6 +42,14 @@
                                 {% if spot.is_retired %}✅ Enable{% else %}🚫 Disable{% endif %}
                             </button>
                         </form>
+                        {% if spot.is_retired and watcher_counts[spot.id] == 0 %}
+                        <form method="POST" action="{{ url_for('spots.delete', spot_id=spot.id) }}">
+                            <button class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Permanently delete {{ spot.name }}? This cannot be undone.')">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                        {% endif %}
                     </div>
                 </td>
             </tr>

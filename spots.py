@@ -11,10 +11,8 @@ spots = Blueprint('spots', __name__)
 @spots.route('/spots')
 @login_required
 def index():
-    if current_user.is_admin:
-        all_spots = Spot.query.order_by(Spot.name).all()
-    else:
-        all_spots = Spot.query.filter_by(is_retired=False).order_by(Spot.name).all()
+    # Retired spots are managed in Manage Spots — never show them on Find Spots
+    all_spots = Spot.query.filter_by(is_retired=False).order_by(Spot.name).all()
     user_favourites = {f.spot_id for f in UserFavouriteSpot.query.filter_by(user_id=current_user.id).all()}
     user_actives = {f.spot_id for f in UserFavouriteSpot.query.filter_by(user_id=current_user.id, is_active=True).all()}
     settings  = AdminSettings.query.first()
@@ -355,13 +353,30 @@ def manage():
     return render_template('spots/manage.html', spots=all_spots, watcher_counts=watcher_counts)
 
 
+@spots.route('/spots/<int:spot_id>/delete', methods=['POST'])
+@login_required
+def delete(spot_id):
+    if not current_user.is_admin:
+        flash('Admin access only.', 'danger')
+        return redirect(url_for('spots.manage'))
+    spot = Spot.query.get_or_404(spot_id)
+    if len(spot.favourited_by) > 0:
+        flash(f'Cannot delete "{spot.name}" — {len(spot.favourited_by)} user(s) still have it favourited.', 'danger')
+        return redirect(url_for('spots.manage'))
+    name = spot.name
+    db.session.delete(spot)
+    db.session.commit()
+    from log_utils import log_event
+    log_event(current_user.email, 'spot_deleted', detail=name, user_id=current_user.id)
+    flash(f'Spot "{name}" permanently deleted.', 'success')
+    return redirect(url_for('spots.manage'))
+
+
 @spots.route('/spots/api/all')
 @login_required
 def api_all():
-    if current_user.is_admin:
-        all_spots = Spot.query.all()
-    else:
-        all_spots = Spot.query.filter_by(is_retired=False).all()
+    # Always exclude retired spots from the map — managed in Manage Spots
+    all_spots = Spot.query.filter_by(is_retired=False).all()
     user_favourites = {f.spot_id for f in UserFavouriteSpot.query.filter_by(user_id=current_user.id).all()}
     return jsonify([{
         'id': s.id,
