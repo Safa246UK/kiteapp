@@ -57,6 +57,12 @@ def add():
         flash('Name and location are required.', 'danger')
         return redirect(url_for('spots.index'))
 
+    # Server-side duplicate guard — catches double-submits that slip past the JS
+    existing = Spot.query.filter(db.func.lower(Spot.name) == name.lower()).first()
+    if existing:
+        flash(f'A spot called "{existing.name}" already exists.', 'warning')
+        return redirect(url_for('spots.index'))
+
     # Auto-detect timezone from coordinates
     try:
         from timezonefinder import TimezoneFinder

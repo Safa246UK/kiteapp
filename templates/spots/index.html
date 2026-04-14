@@ -180,7 +180,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Spot</button>
+                    <button type="submit" id="addSpotSubmitBtn" class="btn btn-primary">Add Spot</button>
                 </div>
             </form>
         </div>
@@ -319,6 +319,13 @@
     // Initialise tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         new bootstrap.Tooltip(el);
+    });
+
+    // Disable submit button on first click to prevent duplicate submissions
+    document.getElementById('addSpotModal').querySelector('form').addEventListener('submit', function () {
+        const btn = document.getElementById('addSpotSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Adding spot…';
     });
 </script>
 {% endblock %}
