@@ -361,12 +361,6 @@ def delete(spot_id):
         flash(f'Cannot delete "{spot.name}" — {len(spot.favourited_by)} user(s) still have it favourited.', 'danger')
         return redirect(url_for('spots.manage'))
     name = spot.name
-    # Clear all dependent records before deleting the spot
-    from models import SpotNote, TideCache, WeatherCache, UserFavouriteSpot
-    SpotNote.query.filter_by(spot_id=spot_id).delete()
-    TideCache.query.filter_by(spot_id=spot_id).delete()
-    WeatherCache.query.filter_by(spot_id=spot_id).delete()
-    UserFavouriteSpot.query.filter_by(spot_id=spot_id).delete()
     db.session.delete(spot)
     db.session.commit()
     from log_utils import log_event

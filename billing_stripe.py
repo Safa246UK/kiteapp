@@ -123,13 +123,21 @@ def create_payment_checkout_url(user, success_url, cancel_url):
     """Return a Stripe Checkout URL in payment mode (charges £3 immediately).
 
     Used for reactivation — the catch-up payment for the current month.
+    Uses inline price_data so no pre-created Price object is needed.
     """
     _ensure_customer(user)
 
     session = _s().checkout.Session.create(
         customer=user.stripe_customer_id,
         mode='payment',
-        line_items=[{'price': _price_id(), 'quantity': 1}],
+        line_items=[{
+            'price_data': {
+                'currency': 'gbp',
+                'product_data': {'name': 'WindChaser — monthly subscription'},
+                'unit_amount': 300,  # £3.00 in pence
+            },
+            'quantity': 1,
+        }],
         success_url=success_url + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=cancel_url,
         metadata={'user_id': str(user.id), 'purpose': 'reactivation'},
@@ -236,12 +244,8 @@ def _on_checkout_completed(session):
 
     elif mode == 'payment' and purpose == 'reactivation':
         # Reactivation payment succeeded — reinstate account
-        from billing import advance_billing_date
-        from datetime import date
-        today = date.today()
-        next_25 = date(today.year, today.month, 25)
-        if today.day >= 25:
-            next_25 = advance_billing_date(next_25)
+        from billing import next_billing_date_from_today
+        next_25 = next_billing_date_from_today()
         user.subscription_status    = 'active'
         user.cancellation_requested = False
         user.next_billing_date      = next_25
@@ -253,7 +257,7 @@ def _on_checkout_completed(session):
 def _on_payment_succeeded(intent):
     """Handle a successful off-session PaymentIntent (25th billing)."""
     from models import db, User
-    from billing import advance_billing_date
+    from billing import next_billing_date_from_today
     from log_utils import log_event
 
     user_id = _meta_int(intent, 'user_id')
@@ -261,11 +265,7 @@ def _on_payment_succeeded(intent):
     if not user:
         return
 
-    from datetime import date
-    today = date.today()
-    next_25 = date(today.year, today.month, 25)
-    if today.day >= 25:
-        next_25 = advance_billing_date(next_25)
+    next_25 = next_billing_date_from_today()
 
     user.subscription_status = 'active'
     user.next_billing_date   = next_25

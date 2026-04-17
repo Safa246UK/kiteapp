@@ -268,7 +268,6 @@ def run_billing_cron(today: date, app_url: str = '') -> dict | None:
                 # we still need to mark the user unpaid and email them.
                 user.subscription_status = 'unpaid'
                 db.session.commit()
-                send_payment_failed_email(user, app_url)
 
     # Day 1 — suspend unpaid and cancelled users whose period has ended
     if today.day == 1:

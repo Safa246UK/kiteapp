@@ -122,8 +122,14 @@ class Spot(db.Model):
         return f"{s} – {e}"
 
     # Relationships
-    favourited_by = db.relationship('UserFavouriteSpot', backref='spot', lazy=True)
-    notes = db.relationship('SpotNote', backref='spot', lazy=True)
+    favourited_by = db.relationship('UserFavouriteSpot', backref='spot', lazy=True,
+                                    cascade='all, delete-orphan')
+    notes = db.relationship('SpotNote', backref='spot', lazy=True,
+                            cascade='all, delete-orphan')
+    tide_cache = db.relationship('TideCache', backref='spot', lazy=True,
+                                 cascade='all, delete-orphan', uselist=False)
+    weather_cache = db.relationship('WeatherCache', backref='spot', lazy=True,
+                                    cascade='all, delete-orphan', uselist=False)
 
 
 class UserFavouriteSpot(db.Model):

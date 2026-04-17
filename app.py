@@ -24,7 +24,13 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,   # test connections before use, discard stale ones
     'pool_recycle': 280,     # recycle connections every 4.5 min (before Render's 5 min idle timeout)
 }
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-later')
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    raise RuntimeError(
+        'SECRET_KEY environment variable must be set. '
+        'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+app.config['SECRET_KEY'] = _secret_key
 
 # Mail config
 app.config['MAIL_SERVER']          = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -111,8 +117,9 @@ app.register_blueprint(billing_bp)
 # Billing gate — runs on every authenticated request
 # ---------------------------------------------------------------------------
 
-_BILLING_SKIP = {
+_PUBLIC_ENDPOINTS = {
     None, 'static', 'sw', 'manifest', 'welcome',
+    'admin_bp.refresh_weather',
     'auth.login', 'auth.logout', 'auth.register',
     'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification',
     'auth.forgot_password', 'auth.reset_password',
@@ -127,7 +134,7 @@ _BILLING_SKIP = {
 def billing_gate():
     if not current_user.is_authenticated:
         return
-    if request.endpoint in _BILLING_SKIP:
+    if request.endpoint in _PUBLIC_ENDPOINTS:
         return
     if current_user.is_admin:
         return  # admins always get through
@@ -217,11 +224,7 @@ def redirect_first_time_visitors():
     # Skip: already seen welcome, or static/infrastructure endpoints
     if request.cookies.get('seen_welcome'):
         return
-    skip_endpoints = {None, 'static', 'sw', 'manifest', 'welcome', 'admin_bp.refresh_weather',
-                      'auth.verify_email', 'auth.verify_pending', 'auth.resend_verification',
-                      'auth.reset_password', 'auth.forgot_password', 'auth.login', 'auth.register',
-                      'billing.stripe_webhook'}
-    if request.endpoint in skip_endpoints:
+    if request.endpoint in _PUBLIC_ENDPOINTS:
         return
     # Logged-in users never need the welcome detour
     if current_user.is_authenticated:

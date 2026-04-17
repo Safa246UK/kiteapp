@@ -140,3 +140,12 @@ def advance_billing_date(current_date: date) -> date:
         month = 1
         year += 1
     return date(year, month, 25)
+
+
+def next_billing_date_from_today():
+    """Return the next upcoming 25th — either this month's or next month's."""
+    today = date.today()
+    candidate = date(today.year, today.month, 25)
+    if today.day >= 25:
+        candidate = advance_billing_date(candidate)
+    return candidate

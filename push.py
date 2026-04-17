@@ -136,7 +136,7 @@ def send_push_to_user(user, title, body, url='/'):
                 },
                 data=payload,
                 vapid_private_key=private_key,
-                vapid_claims={'sub': 'mailto:admin@windchaser.com'},
+                vapid_claims={'sub': f"mailto:{os.environ.get('CONTACT_EMAIL', 'admin@windchaser.info')}"},
                 headers={'Urgency': 'high'},
                 ttl=3600,   # keep in push server queue for up to 1 hour if device offline
             )

@@ -474,17 +474,12 @@ def send_payment_email(user_id):
 @login_required
 @admin_required
 def reinstate_user(user_id):
-    from billing import advance_billing_date
-    from datetime import date
+    from billing import next_billing_date_from_today
     user = User.query.get_or_404(user_id)
     user.subscription_status    = 'active'
     user.cancellation_requested = False
-    # Set next billing date to the next 25th
-    today = date.today()
-    next_25 = date(today.year, today.month, 25)
-    if today.day >= 25:
-        next_25 = advance_billing_date(next_25)
-    user.next_billing_date = next_25
+    user.next_billing_date = next_billing_date_from_today()
+    next_25 = user.next_billing_date
     db.session.commit()
     from log_utils import log_event
     log_event(current_user.email, 'billing_reinstated',

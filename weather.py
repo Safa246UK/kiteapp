@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime, date, timedelta
-from models import db, WeatherCache, TideCache
+from models import db, WeatherCache, TideCache, COMPASS_POINTS
 
 WEATHER_API = "https://api.open-meteo.com/v1/forecast"
 MARINE_API  = "https://marine-api.open-meteo.com/v1/marine"
@@ -15,9 +15,6 @@ WMO_EMOJI = {
     80: '🌦️', 81: '🌧️', 82: '🌧️',
     95: '⛈️', 96: '⛈️', 99: '⛈️'
 }
-
-COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
-           'S','SSW','SW','WSW','W','WNW','NW','NNW']
 
 RATING_COLOURS = {
     'perfect':     '#c8f7c5',   # light green
@@ -35,7 +32,7 @@ COLOUR_HEX = {'green': '#4CAF50', 'amber': '#FFD54F', 'grey': '#e0e0e0'}
 # ---------------------------------------------------------------------------
 
 def degrees_to_compass(deg):
-    return COMPASS[round(deg / 22.5) % 16]
+    return COMPASS_POINTS[round(deg / 22.5) % 16]
 
 
 def _direction_rating(spot, wind_dir_compass):
