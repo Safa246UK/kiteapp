@@ -47,7 +47,6 @@ def add():
     max_tide = request.form.get('max_tide_percent', 85)
     perfect = request.form.get('perfect_directions', '')
     good = request.form.get('good_directions', '')
-    okay = request.form.get('okay_directions', '')
     poor = request.form.get('poor_directions', '')
     dangerous = request.form.get('dangerous_directions', '')
 
@@ -79,7 +78,6 @@ def add():
         max_tide_percent=float(max_tide),
         perfect_directions=perfect,
         good_directions=good,
-        okay_directions=okay,
         poor_directions=poor,
         dangerous_directions=dangerous,
         created_by=current_user.id,
@@ -299,7 +297,6 @@ def edit(spot_id):
         spot.max_tide_percent = float(request.form.get('max_tide_percent', 85))
         spot.perfect_directions   = request.form.get('perfect_directions', '')
         spot.good_directions      = request.form.get('good_directions', '')
-        spot.okay_directions      = ''   # retired — legacy data cleared on every save
         spot.poor_directions      = request.form.get('poor_directions', '')
         spot.dangerous_directions = request.form.get('dangerous_directions', '')
         spot.is_landlocked = 'is_landlocked' in request.form

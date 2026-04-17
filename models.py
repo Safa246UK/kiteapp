@@ -82,7 +82,6 @@ class Spot(db.Model):
     # Wind direction ratings (comma separated compass points e.g. "SW,WSW,W")
     perfect_directions = db.Column(db.String(200), default='')
     good_directions = db.Column(db.String(200), default='')
-    okay_directions = db.Column(db.String(200), default='')
     poor_directions = db.Column(db.String(200), default='')
     dangerous_directions = db.Column(db.String(200), default='')
 

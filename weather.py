@@ -47,7 +47,6 @@ def _direction_rating(spot, wind_dir_compass):
     if wind_dir_compass in dirs('perfect_directions'):   return 'perfect'
     if wind_dir_compass in dirs('good_directions'):      return 'good'
     if wind_dir_compass in dirs('poor_directions'):      return 'poor'
-    # okay_directions are treated as dangerous (legacy field, no longer used)
     return 'dangerous'
 
 
@@ -159,7 +158,7 @@ def _good_hours_in_set(hour_set, date_key, spot, user,
         spd     = round(speeds[i]) if i < len(speeds) else 0
         compass = degrees_to_compass(dirs[i] if i < len(dirs) else 0)
         wind_ok = user.min_wind <= spd <= user.max_wind
-        dir_ok  = _direction_rating(spot, compass) in ('perfect', 'good', 'okay')
+        dir_ok  = _direction_rating(spot, compass) in ('perfect', 'good')
         td      = tide_data.get(date_key, {}).get(local_hour)
         tide_ok = bool(td and spot.min_tide_percent <= td['pct'] <= spot.max_tide_percent)
         if wind_ok and dir_ok and (tide_ok or tide_irrelevant):
@@ -239,7 +238,7 @@ def _count_good_hours(spot, times, speeds, dirs, sun,
         compass = degrees_to_compass(deg)
 
         wind_in_range    = min_wind <= spd <= max_wind
-        direction_usable = _direction_rating(spot, compass) in ('perfect', 'good', 'okay')
+        direction_usable = _direction_rating(spot, compass) in ('perfect', 'good')
         td               = tide_data.get(date_key, {}).get(dt.hour)
         tide_usable      = bool(td and spot.min_tide_percent <= td['pct'] <= spot.max_tide_percent)
 
