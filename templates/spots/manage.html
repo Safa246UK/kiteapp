@@ -6,6 +6,45 @@
     <span class="text-muted">{{ spots|length }} spot(s) total</span>
 </div>
 
+<!-- Spot Settings -->
+<div class="card mb-4">
+    <div class="card-header"><strong>⚙️ Spot Settings</strong></div>
+    <div class="card-body">
+        <form id="settingsForm" method="POST" action="{{ url_for('admin_bp.update_settings') }}" class="row g-3 align-items-end">
+            <input type="hidden" name="source" value="spots">
+            {# Preserve billing_enabled so saving here doesn't accidentally toggle it #}
+            {% if settings and settings.billing_enabled %}
+            <input type="hidden" name="billing_enabled" value="on">
+            {% endif %}
+            <div class="col-md-3">
+                <label class="form-label">Max Favourite Spots per User</label>
+                <input type="number" name="max_favourite_spots" class="form-control settings-input"
+                       value="{{ settings.max_favourite_spots if settings else 3 }}" min="1">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Max Alert-Me Spots per User</label>
+                <input type="number" name="max_active_spots" class="form-control settings-input"
+                       value="{{ settings.max_active_spots if settings else 2 }}" min="1">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Default Min Tide %</label>
+                <input type="number" name="default_min_tide_percent" class="form-control settings-input"
+                       value="{{ (settings.default_min_tide_percent | int) if settings else 0 }}" min="0" max="100">
+                <small class="text-muted">LAT → HAT range</small>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Default Max Tide %</label>
+                <input type="number" name="default_max_tide_percent" class="form-control settings-input"
+                       value="{{ (settings.default_max_tide_percent | int) if settings else 90 }}" min="0" max="100">
+                <small class="text-muted">LAT → HAT range</small>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="table-responsive">
     <table class="table table-hover align-middle">
         <thead class="table-dark">
@@ -61,4 +100,36 @@
         </tbody>
     </table>
 </div>
+
+<script>
+(function () {
+    const form = document.getElementById('settingsForm');
+    if (!form) return;
+
+    // Record original values on load
+    const originals = {};
+    form.querySelectorAll('.settings-input').forEach(function (el) {
+        originals[el.name] = el.value;
+    });
+
+    let isDirty = false;
+
+    form.querySelectorAll('.settings-input').forEach(function (el) {
+        el.addEventListener('input', function () {
+            isDirty = el.value !== originals[el.name] ||
+                      Array.from(form.querySelectorAll('.settings-input'))
+                          .some(function (i) { return i.value !== originals[i.name]; });
+        });
+    });
+
+    form.addEventListener('submit', function () { isDirty = false; });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -330,17 +330,21 @@ def update_settings():
     max_favs_in_use   = max_favs_in_use[0]   if max_favs_in_use   else 0
     max_active_in_use = max_active_in_use[0]  if max_active_in_use else 0
 
+    # Redirect back to whichever admin page submitted the form
+    source = request.form.get('source', 'users')
+    redirect_target = url_for('spots.manage') if source == 'spots' else url_for('admin_bp.users')
+
     if new_max_favs < max_favs_in_use:
         flash(f'Cannot reduce max favourites below {max_favs_in_use} — a user already has that many.', 'danger')
-        return redirect(url_for('admin_bp.users'))
+        return redirect(redirect_target)
 
     if new_max_active < max_active_in_use:
         flash(f'Cannot reduce max alert-me spots below {max_active_in_use} — a user already has that many.', 'danger')
-        return redirect(url_for('admin_bp.users'))
+        return redirect(redirect_target)
 
     if new_max_active > new_max_favs:
         flash('Max alert-me spots cannot exceed max favourite spots.', 'danger')
-        return redirect(url_for('admin_bp.users'))
+        return redirect(redirect_target)
 
     billing_enabled = 'billing_enabled' in request.form
     settings.max_favourite_spots      = new_max_favs
@@ -353,7 +357,7 @@ def update_settings():
     log_event(current_user.email, 'settings_updated',
               detail=f'max_favs={new_max_favs}, max_active={new_max_active}, billing_enabled={billing_enabled}')
     flash('Settings updated.', 'success')
-    return redirect(url_for('admin_bp.users'))
+    return redirect(redirect_target)
 
 
 @admin_bp.route('/admin/logs')

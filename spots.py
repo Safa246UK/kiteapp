@@ -347,7 +347,8 @@ def manage():
         return redirect(url_for('main.index'))
     all_spots = Spot.query.order_by(Spot.name).all()
     watcher_counts = {s.id: len(s.favourited_by) for s in all_spots}
-    return render_template('spots/manage.html', spots=all_spots, watcher_counts=watcher_counts)
+    settings = AdminSettings.query.first()
+    return render_template('spots/manage.html', spots=all_spots, watcher_counts=watcher_counts, settings=settings)
 
 
 @spots.route('/spots/<int:spot_id>/delete', methods=['POST'])

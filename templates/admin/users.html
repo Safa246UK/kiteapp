@@ -6,7 +6,7 @@
     <div class="d-flex gap-2">
         <form method="POST" action="{{ url_for('admin_bp.refresh_weather') }}"
               onsubmit="return confirm('Refresh weather and tide data for all spots now?')">
-            <button class="btn btn-outline-primary">🌬️ Refresh Weather</button>
+            <button class="btn btn-primary">🌬️ Refresh Weather</button>
         </form>
         <form method="POST" action="{{ url_for('admin_bp.send_all_alerts') }}"
               onsubmit="return confirm('Send alerts to all enabled users now?')">
@@ -15,45 +15,27 @@
     </div>
 </div>
 
-<!-- Admin Settings -->
+<!-- Admin Settings (billing toggle only — spot limits live on Manage Spots) -->
 <div class="card mb-4">
     <div class="card-header"><strong>⚙️ Global Settings</strong></div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin_bp.update_settings') }}" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Max Favourite Spots per User</label>
-                <input type="number" name="max_favourite_spots" class="form-control"
-                       value="{{ settings.max_favourite_spots }}" min="1">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Max Alert-Me Spots per User</label>
-                <input type="number" name="max_active_spots" class="form-control"
-                       value="{{ settings.max_active_spots }}" min="1">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Default Min Tide %</label>
-                <input type="number" name="default_min_tide_percent" class="form-control"
-                       value="{{ settings.default_min_tide_percent | int }}" min="0" max="100">
-                <small class="text-muted">Lowest (LAT) to Highest (HAT) Astronomical Tide</small>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Default Max Tide %</label>
-                <input type="number" name="default_max_tide_percent" class="form-control"
-                       value="{{ settings.default_max_tide_percent | int }}" min="0" max="100">
-                <small class="text-muted">Lowest (LAT) to Highest (HAT) Astronomical Tide</small>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100">Save Settings</button>
-            </div>
-            <div class="col-12 mt-2">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" name="billing_enabled"
+        <form id="settingsForm" method="POST" action="{{ url_for('admin_bp.update_settings') }}">
+            <input type="hidden" name="source" value="users">
+            {# Pass through the spot-limit values unchanged so they aren't reset #}
+            <input type="hidden" name="max_favourite_spots"      value="{{ settings.max_favourite_spots }}">
+            <input type="hidden" name="max_active_spots"         value="{{ settings.max_active_spots }}">
+            <input type="hidden" name="default_min_tide_percent" value="{{ settings.default_min_tide_percent | int }}">
+            <input type="hidden" name="default_max_tide_percent" value="{{ settings.default_max_tide_percent | int }}">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input settings-input" type="checkbox" name="billing_enabled"
                            id="billingSwitch" {% if settings.billing_enabled %}checked{% endif %}>
                     <label class="form-check-label" for="billingSwitch">
                         <strong>Billing enabled</strong>
-                        <span class="text-muted small ms-1">— enforces subscription status; turn off to disable all payment gates instantly</span>
+                        <span class="text-muted small ms-2">— enforces subscription status; turn off to disable all payment gates instantly</span>
                     </label>
                 </div>
+                <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
             </div>
         </form>
     </div>
@@ -222,5 +204,30 @@ function openRoleModal(userId, name, isAdmin) {
     document.getElementById('roleForm').querySelector('input[type=password]').value = '';
     new bootstrap.Modal(document.getElementById('roleModal')).show();
 }
+
+// Unsaved-changes guard for the billing toggle
+(function () {
+    const form = document.getElementById('settingsForm');
+    if (!form) return;
+
+    const billingSwitch = form.querySelector('.settings-input');
+    if (!billingSwitch) return;
+
+    const originalChecked = billingSwitch.checked;
+    let isDirty = false;
+
+    billingSwitch.addEventListener('change', function () {
+        isDirty = billingSwitch.checked !== originalChecked;
+    });
+
+    form.addEventListener('submit', function () { isDirty = false; });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+})();
 </script>
 {% endblock %}
