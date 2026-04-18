@@ -249,9 +249,18 @@ def _count_good_hours(spot, times, speeds, dirs, sun,
 # Weather fetching
 # ---------------------------------------------------------------------------
 
-def fetch_and_cache_weather(spot):
-    """Call Open-Meteo (+ marine) and store result in WeatherCache."""
-    weather_resp = requests.get(WEATHER_API, params={
+def _fetch_weather_with_retry(spot, max_attempts=2, retry_delay=3):
+    """Fetch weather data from Open-Meteo with retry on transient failure.
+
+    Returns weather_data dict on success.
+    Raises on permanent failure (bad data, exhausted retries).
+
+    Uses a split timeout: 5s to connect, 20s to read.
+    Checks HTTP status before parsing JSON so errors are descriptive.
+    """
+    import time
+
+    params = {
         'latitude':        spot.latitude,
         'longitude':       spot.longitude,
         'hourly':          'windspeed_10m,winddirection_10m,windgusts_10m,weathercode,temperature_2m',
@@ -259,13 +268,51 @@ def fetch_and_cache_weather(spot):
         'wind_speed_unit': 'kn',
         'timezone':        'UTC',
         'forecast_days':   7,
-    }, timeout=10)
-    weather_data = weather_resp.json()
+    }
 
-    # Don't overwrite good cached data with an error response
-    if 'error' in weather_data or 'hourly' not in weather_data:
-        raise ValueError(f"Open-Meteo error for {spot.name}: {weather_data.get('reason', str(weather_data)[:120])}")
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = requests.get(WEATHER_API, params=params, timeout=(5, 20))
+            resp.raise_for_status()           # raises HTTPError on 4xx/5xx
+            weather_data = resp.json()
 
+            if 'error' in weather_data or 'hourly' not in weather_data:
+                reason = weather_data.get('reason', str(weather_data)[:120])
+                raise ValueError(f"Open-Meteo API error: {reason}")
+
+            return weather_data
+
+        except requests.exceptions.Timeout as e:
+            last_error = f"Timeout (attempt {attempt}/{max_attempts}): {e}"
+        except requests.exceptions.HTTPError as e:
+            last_error = f"HTTP {e.response.status_code} (attempt {attempt}/{max_attempts})"
+            # Don't retry on client errors (4xx) — they won't recover
+            if e.response.status_code < 500:
+                break
+        except requests.exceptions.ConnectionError as e:
+            last_error = f"Connection error (attempt {attempt}/{max_attempts}): {e}"
+        except ValueError:
+            raise   # bad API response — no point retrying
+        except Exception as e:
+            last_error = f"Unexpected error (attempt {attempt}/{max_attempts}): {e}"
+
+        if attempt < max_attempts:
+            time.sleep(retry_delay)
+
+    raise RuntimeError(f"Weather fetch failed for {spot.name} after {max_attempts} attempts — {last_error}")
+
+
+def fetch_and_cache_weather(spot):
+    """Call Open-Meteo (+ marine) and store result in WeatherCache.
+
+    Weather fetch uses retry logic. Marine fetch is best-effort only —
+    failure is silently ignored and the cached weather data is still saved.
+    """
+    # Primary weather data — raises on failure
+    weather_data = _fetch_weather_with_retry(spot)
+
+    # Marine wave data — best-effort, never blocks a weather update
     marine_data = None
     try:
         marine_resp = requests.get(MARINE_API, params={
@@ -274,22 +321,31 @@ def fetch_and_cache_weather(spot):
             'hourly':        'wave_height',
             'timezone':      'UTC',
             'forecast_days': 7,
-        }, timeout=10)
+        }, timeout=(5, 20))
+        marine_resp.raise_for_status()
         marine_data = marine_resp.json()
         if 'error' in marine_data:
             marine_data = None
+    except requests.exceptions.Timeout:
+        pass   # marine timeout is non-fatal
+    except requests.exceptions.HTTPError:
+        pass   # marine HTTP error is non-fatal
     except Exception:
-        pass
+        pass   # marine any other error is non-fatal
 
     payload = json.dumps({'weather': weather_data, 'marine': marine_data})
 
-    cache = WeatherCache.query.filter_by(spot_id=spot.id).first()
-    if cache:
-        cache.fetched_at    = datetime.utcnow()
-        cache.forecast_json = payload
-    else:
-        db.session.add(WeatherCache(spot_id=spot.id, forecast_json=payload))
-    db.session.commit()
+    try:
+        cache = WeatherCache.query.filter_by(spot_id=spot.id).first()
+        if cache:
+            cache.fetched_at    = datetime.utcnow()
+            cache.forecast_json = payload
+        else:
+            db.session.add(WeatherCache(spot_id=spot.id, forecast_json=payload))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise RuntimeError(f"Failed to save weather cache for {spot.name}: {e}") from e
 
 
 # ---------------------------------------------------------------------------

@@ -6,9 +6,15 @@ scheduler = BackgroundScheduler(timezone='Europe/London')
 def refresh_all_weather():
     """Fetch and cache weather for every active spot. Returns (ok, failed) counts.
 
-    Uses ThreadPoolExecutor so spots are fetched in parallel (up to 2 at a time).
+    Uses ThreadPoolExecutor (2 workers) so spots are fetched in parallel.
     Each thread gets its own Flask app context so SQLAlchemy sessions are thread-safe.
+
+    Spots are shuffled before submission so the same spots don't always bear
+    the brunt of API rate limits. A 1-second stagger between submissions
+    avoids hammering the API with simultaneous requests.
     """
+    import random
+    import time
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from app import app
     from models import Spot
@@ -19,10 +25,15 @@ def refresh_all_weather():
     with app.app_context():
         spot_data = [(s.id, s.name) for s in Spot.query.filter_by(is_retired=False).all()]
 
+    # Shuffle so the same spots don't always end up last in the queue
+    random.shuffle(spot_data)
+
     def fetch_one(spot_id, spot_name):
         with app.app_context():
             try:
                 spot = Spot.query.get(spot_id)
+                if spot is None:
+                    return False, spot_name, 'Spot not found in DB'
                 fetch_and_cache_weather(spot)
                 log_event('CRON', 'weather_fetch', detail=f"{spot_name} — success", spot_id=spot_id)
                 print(f"[Weather] Updated: {spot_name}")
@@ -34,13 +45,24 @@ def refresh_all_weather():
 
     ok, failed = 0, 0
     with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = {executor.submit(fetch_one, sid, name): name for sid, name in spot_data}
+        futures = {}
+        for sid, name in spot_data:
+            futures[executor.submit(fetch_one, sid, name)] = name
+            time.sleep(1)   # 1-second stagger between submissions
+
         for future in as_completed(futures):
-            success, _, _ = future.result()
+            try:
+                success, _, _ = future.result()
+            except Exception as e:
+                # Future itself raised — shouldn't happen given our inner try/except,
+                # but belt-and-braces so one bad future can't crash the whole run
+                print(f"[Weather] Unexpected future error: {e}")
+                success = False
             if success:
                 ok += 1
             else:
                 failed += 1
+
     return ok, failed
 
 
